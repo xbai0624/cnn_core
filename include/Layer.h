@@ -112,6 +112,9 @@ public:
     virtual void ForwardPropagate() = 0;
     virtual void BackwardPropagate() = 0;
     virtual void UpdateWeightsAndBias() = 0;
+    virtual void SetLearningRate(double) = 0;
+    virtual void SetRegularizationMethod(Regularization) = 0;
+    virtual void SetRegularizationParameter(double) = 0;
 
     //after each batch process, we update weights and bias
     virtual void ProcessBatch()=0;

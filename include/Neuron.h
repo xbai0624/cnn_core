@@ -54,9 +54,6 @@ public:
     void SetCoordJ(size_t);
     void SetCoordK(size_t);
     void SetCoord(NeuronCoord);
-    void SetLearningRate(double);
-    void SetRegularizationMethod(Regularization);
-    void SetRegularizationParameter(double);
 
     void UpdateA(); // update matrix a; a computation is independent of layer type, no need to design helper functions for different type layers
     void UpdateSigmaPrime(); // update derivative of a over z; sigma^prime
@@ -71,17 +68,6 @@ public:
     void UpdateZFC();
     void UpdateZPooling();
 
-    // update weights and bias, for external call
-    void UpdateWeightsAndBias();
-    void UpdateWeightsAndBiasFC();
-    void UpdateWeightsAndBiasCNN();
-    void UpdateWeightsAndBiasPooling();
-    // helpers, update weights and bias gradients vector for each training sample
-    void UpdateWeightsAndBiasGradients();
-    void UpdateWeightsAndBiasGradientsFC();
-    void UpdateWeightsAndBiasGradientsCNN();
-    void UpdateWeightsAndBiasGradientsPooling();
-
     // getters 
     std::vector<double> & GetAVector();
     std::vector<double> & GetDeltaVector();
@@ -91,16 +77,6 @@ public:
 private:
     Matrix *__w;  // weights
     double *__b;  // bias
-
-    // the following two vectors need to be updated in back propagation step, along with delta
-    std::vector<Matrix> __wGradient; // saves weight gradient in each training sample, when one batch finished, one can sum this vector to get total gradient in one batch
-    std::vector<float> __bGradient; // saves bias gradient in each training sample, when one batch finished, one can sum this vector to get total gradient in one batch
-
-    double __learningRate = 0.0; // learning rate
-
-    // regularization always active, if you don't want it, set __regularization parameter to 0
-    Regularization __regularizationMethod = Regularization::L2;
-    double __regularizationParameter = 0.0; // default to 0. 
 
     // for batch training, after each batch, these vectors will be cleared for next batch
     std::vector<double> __a; // the length is dependent on training batch size

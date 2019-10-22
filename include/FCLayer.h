@@ -24,7 +24,22 @@ public:
     virtual void EpochInit();
     virtual void ForwardPropagate();
     virtual void BackwardPropagate();
+
+    // update weights and bias, for external call
     virtual void UpdateWeightsAndBias();
+    void UpdateWeightsAndBiasFC();
+    void UpdateWeightsAndBiasCNN();
+    void UpdateWeightsAndBiasPooling();
+    // helpers, update weights and bias gradients vector for each training sample
+    void UpdateWeightsAndBiasGradients();
+    void UpdateWeightsAndBiasGradientsFC();
+    void UpdateWeightsAndBiasGradientsCNN();
+    void UpdateWeightsAndBiasGradientsPooling();
+
+    // hyper parameters
+    virtual void SetLearningRate(double);
+    virtual void SetRegularizationMethod(Regularization);
+    virtual void SetRegularizationParameter(double);
 
     //after each batch process, we update weights and bias
     virtual void ProcessBatch();
@@ -94,12 +109,26 @@ private:
     //                          M is the current layer size
     std::vector<Matrix> __weightMatrix;
     // bias vector: for cnn, __biasVector.size() = # of kernels; for MLP, __biaseVector.size() = # of neurons
-    std::vector<double> __biasVector;
+    std::vector<Matrix> __biasVector;
+
+    // the following two vectors need to be updated in back propagation step, along with delta
+    // saves weight gradient in each batch
+    // Images.SampleOutputImage is a vector saves gradients for each kernel
+    std::vector<Images> __wGradient; 
+    // saves bias gradient in each batch
+    std::vector<Images> __bGradient; 
+
+    double __learningRate = 0.0; // learning rate
+
+    // regularization always active, if you don't want it, set __regularization parameter to 0
+    Regularization __regularizationMethod = Regularization::L2;
+    double __regularizationParameter = 0.0; // default to 0. 
+
 
     // 3):
     // active weight matrix and active vector bias --for dropout algorithm
     std::vector<Matrix> __weightMatrixActive;
-    std::vector<double> __biasVectorActive;
+    std::vector<Matrix> __biasVectorActive;
 
     // 4):
     // this 3D matrix flags active neurons for FC, active weight matrix element for CNN
