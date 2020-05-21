@@ -134,13 +134,13 @@ void Neuron::UpdateZFC()
 	exit(0);
     }
     Images &images = _t.back(); // get images for current sample
-    if(images.SampleOutputImage.size() != 1) 
+    if(images.OutputImageFromKernel.size() != 1) 
     {
 	std::cout<<"Eroor: layer type not match, expecting FC layer."<<std::endl;
 	exit(0);
     }
 
-    Matrix &image = images.SampleOutputImage[0];
+    Matrix &image = images.OutputImageFromKernel[0];
 
     Matrix res = (*__w) * image;
     auto dim = res.Dimension();
@@ -166,7 +166,7 @@ void Neuron::UpdateZCNN()
     size_t i_end = i_start + w_dim.first;
     size_t j_end = j_start + w_dim.second;
 
-    auto &current_sample_image = (inputImage.back()).SampleOutputImage;
+    auto &current_sample_image = (inputImage.back()).OutputImageFromKernel;
     auto image_dim = current_sample_image[0].Dimension();
     if(i_end > image_dim.first || j_end > image_dim.second)
     {
@@ -193,7 +193,7 @@ void Neuron::UpdateZPooling()
     // pooling layer
     // should be with cnn layer, just kernel matrix all elements=1, bias = 0;
     auto inputImage = __previousLayer->GetImagesA();
-    if(inputImage.back().SampleOutputImage.size() < __coord.k)
+    if(inputImage.back().OutputImageFromKernel.size() < __coord.k)
     {
 	// output image for current sample
 	// for pooling layer, number of kernels (previous layer)  = number of kernels (current layer)
@@ -202,7 +202,7 @@ void Neuron::UpdateZPooling()
     }
     //Matrix image = inputImage[__coord.k];
     Images image = inputImage.back(); // images for current training sample
-    std::vector<Matrix> & images = image.SampleOutputImage;
+    std::vector<Matrix> & images = image.OutputImageFromKernel;
     Matrix &kernel_image = images[__coord.k];
 
     // get pooling stride
@@ -324,7 +324,7 @@ void Neuron::UpdateDeltaFC()
 
     auto __deltaNext = __nextLayer->GetImagesDelta();
     Images image_delta_Next = __deltaNext.back(); // get current sample delta
-    std::vector<Matrix> &deltaNext = image_delta_Next.SampleOutputImage;
+    std::vector<Matrix> &deltaNext = image_delta_Next.OutputImageFromKernel;
     if( deltaNext.size() != 1 ) 
     {
 	std::cout<<"Error: Delta matrix dimension not match in FC layer"<<std::endl;
@@ -371,7 +371,7 @@ void Neuron::UpdateDeltaCNN()
     auto weightVecNext = __nextLayer->GetWeightMatrix();
 
     Images &image_next_layer = deltaVecNext.back(); // delta for current training sample
-    std::vector<Matrix> & vec_delta_image = image_next_layer.SampleOutputImage;
+    std::vector<Matrix> & vec_delta_image = image_next_layer.OutputImageFromKernel;
 
     size_t C_next = vec_delta_image.size();
     if( C_next != weightVecNext->size() )
@@ -422,7 +422,7 @@ void Neuron::UpdateDeltaPooling()
 
     auto deltaNext = __nextLayer->GetImagesDelta();
     Images & delta_image_for_current_sample = deltaNext.back(); // delta image for current sample
-    std::vector<Matrix> &deltaImages = delta_image_for_current_sample.SampleOutputImage; // matrix
+    std::vector<Matrix> &deltaImages = delta_image_for_current_sample.OutputImageFromKernel; // matrix
 
     if(deltaImages.size() <= __coord.k) 
     {
@@ -447,7 +447,7 @@ void Neuron::UpdateDeltaPooling()
 	// get all related input neurons, check if this neuron is the max one
 	auto a_matrix_current_layer_vec = __layer->GetImagesA(); // batch images
 	Images &image_current_sample = a_matrix_current_layer_vec.back(); // current sample
-	std::vector<Matrix> & matrix_current_sample = image_current_sample.SampleOutputImage; // matrix
+	std::vector<Matrix> & matrix_current_sample = image_current_sample.OutputImageFromKernel; // matrix
 
 	Matrix a_matrix = matrix_current_sample[__coord.k];
 	double _tmp = 0;

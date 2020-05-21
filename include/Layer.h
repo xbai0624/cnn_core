@@ -120,7 +120,7 @@ std::ostream & operator<<(std::ostream&, const NeuronCoord &c);
 // so each batch will have a vector of this struct
 struct Images
 {
-    std::vector<Matrix> SampleOutputImage; // this vector is for different cnn kernels 
+    std::vector<Matrix> OutputImageFromKernel; // this vector is for different cnn kernels 
 
     Images()
     {}
@@ -129,7 +129,7 @@ struct Images
     {
         // for cnn layer, this returns number of kernels
         // for mlp layer, this should return 1
-        return SampleOutputImage.size();
+        return OutputImageFromKernel.size();
     }
 };
 

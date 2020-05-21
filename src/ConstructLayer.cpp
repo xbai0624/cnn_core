@@ -48,10 +48,11 @@ ConstructLayer::~ConstructLayer()
 
 void ConstructLayer::Init()
 {
-    if(__type == LayerType::input) // input layer do not need neurons, only a matrix is needed
+    if(__type == LayerType::input) 
     {
 	__p_data_interface = new DataInterface();
 	ImplementInputLayerA();
+	InitNeurons();
     }
     else  // other layer
     {
@@ -155,8 +156,8 @@ void ConstructLayer::InitNeurons()
 {
     if(__type == LayerType::cnn)
 	InitNeuronsCNN();
-    else if(__type == LayerType::input) // input layer currently only accept 2D image, so same with CNN
-	InitNeuronsCNN();
+    else if(__type == LayerType::input)
+	InitNeuronsInputLayer();
     else if(__type == LayerType::fullyConnected)
 	InitNeuronsFC();
     else
@@ -249,6 +250,33 @@ void ConstructLayer::InitNeuronsFC()
     }
     __neurons.push_back(image);
 }
+
+
+void ConstructLayer::InitNeuronsInputLayer()
+{
+    __neurons.clear();
+    if(__imageA.size() <= 0)
+    {
+        std::cout<<"Error: must initialize 'A' matrix before initializing neurons for input layer"
+	         <<std::endl;
+        exit(0);
+    }
+
+    Matrix tmp = __imageA[0].OutputImageFromKernel[0]; // first sample
+    auto dim = tmp.Dimension();
+    Pixel2D<Neuron*> image(dim.first, dim.second);
+    for(size_t i=0;i<dim.first;i++)
+    {
+	for(size_t j=0;j<dim.second;j++)
+	{
+	    Neuron *n = new Neuron();
+	    image[i][0] = n;
+	}
+    }
+    __neurons.push_back(image);
+}
+
+
 
 void ConstructLayer::InitFilters()
 {
@@ -380,7 +408,7 @@ std::vector<Images>& ConstructLayer::GetImagesA()
 
 void ConstructLayer::ImplementInputLayerA()
 {
-    // if this layer is input layer, then fill the a matrix directly with input image data
+    // if this layer is input layer, then fill the 'a' matrix directly with input image data
 
     auto input_data = __p_data_interface->GetNewBatch();
 
@@ -390,7 +418,7 @@ void ConstructLayer::ImplementInputLayerA()
 	Images image_a; // one image
 
 	// input layer only has one kernel
-	image_a.SampleOutputImage.push_back(i);
+	image_a.OutputImageFromKernel.push_back(i);
 
 	// push this image to images of this batch
 	__imageA.push_back(image_a);
@@ -878,7 +906,7 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 	std::cout<<"Error: batch size not equal..."<<std::endl;
 	exit(0);
     }
-    if(a_images.back().SampleOutputImage.size() != 1 ) {
+    if(a_images.back().OutputImageFromKernel.size() != 1 ) {
 	std::cout<<"Error: updating weights and bias gradients for FC, dimension not match."<<std::endl;
 	exit(0);
     }
@@ -892,8 +920,8 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
     // loop for batch
     for(size_t i=0;i<a_images.size();i++)
     {
-	Matrix a_matrix = a_images[i].SampleOutputImage[0]; // 'a' image from previous layer
-	Matrix d_matrix = d_images[i].SampleOutputImage[0]; // 'd' image from current layer
+	Matrix a_matrix = a_images[i].OutputImageFromKernel[0]; // 'a' image from previous layer
+	Matrix d_matrix = d_images[i].OutputImageFromKernel[0]; // 'd' image from current layer
 
 	auto d1 = (__weightMatrixActive[0]).Dimension(), d2 = a_matrix.Dimension(), d3 = d_matrix.Dimension();
 	if(d1.first != d3.first || d1.second != d2.first)
@@ -907,11 +935,11 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 
 	// push bias gradient for current training sample
 	Images tmp_w_gradients;
-	tmp_w_gradients.SampleOutputImage.push_back(dw);
+	tmp_w_gradients.OutputImageFromKernel.push_back(dw);
 	__wGradient.push_back(tmp_w_gradients); // push weight gradient for current training sample
 
 	Images tmp_b_gradients;
-	tmp_b_gradients.SampleOutputImage.push_back(d_matrix);
+	tmp_b_gradients.OutputImageFromKernel.push_back(d_matrix);
 	__bGradient.push_back(tmp_b_gradients); // bias gradient equals delta
     }
 } 
@@ -925,7 +953,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
 	std::cout<<"Error: update FC weights, batch size not match."<<std::endl;
 	exit(0);
     }
-    if( __wGradient[0].SampleOutputImage.size() != 1 || __bGradient[0].SampleOutputImage.size()!=1) 
+    if( __wGradient[0].OutputImageFromKernel.size() != 1 || __bGradient[0].OutputImageFromKernel.size()!=1) 
     {
 	std::cout<<"Error: update FC weiths, more than 1 w gradient matrix found."
 	    <<std::endl;
@@ -939,7 +967,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     }
     Matrix dw((__weightMatrixActive[0]).Dimension()); 
     for(size_t i=0;i<M;i++){ // sum x (batches)
-	dw  = dw + __wGradient[i].SampleOutputImage[0];
+	dw  = dw + __wGradient[i].OutputImageFromKernel[0];
     }
     dw = dw * float(__learningRate/(double)M); // over batch 
 
@@ -967,7 +995,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     // bias
     Matrix db(__biasVector[0].Dimension());
     for(size_t i=0;i<M;i++){
-	db = db + __bGradient[i].SampleOutputImage[0];
+	db = db + __bGradient[i].OutputImageFromKernel[0];
     }
     db = db / (double)M;
     db = db * __learningRate;
@@ -994,9 +1022,9 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
     for(size_t nbatch = 0;nbatch<aVec.size();nbatch++)
     {
 	Images &a_image =  aVec[nbatch];
-	std::vector<Matrix> &a_matrix = a_image.SampleOutputImage;
+	std::vector<Matrix> &a_matrix = a_image.OutputImageFromKernel;
 	Images &d_image = deltaVec[nbatch];
-	std::vector<Matrix> &d_matrix = d_image.SampleOutputImage;
+	std::vector<Matrix> &d_matrix = d_image.OutputImageFromKernel;
 	if(d_matrix.size() != nKernel) {
 	    std::cout<<"Error: updateing cnn w gradients, number of kernels not match."<<std::endl;
 	    exit(0);
@@ -1030,14 +1058,14 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
 		    dw[i][j] = _tmp;
 		}
 	    }
-	    tmp_w_gradients.SampleOutputImage.push_back(dw); // push weight gradient for current training sample
+	    tmp_w_gradients.OutputImageFromKernel.push_back(dw); // push weight gradient for current training sample
 
 	    // update bias gradient
 	    Matrix db(1, 1);
 	    auto dim = delta.Dimension();
 	    double b_gradient = delta.SumInSection(0, dim.first, 0, dim.second);
 	    db[0][0] = b_gradient;
-	    tmp_b_gradients.SampleOutputImage.push_back(db);
+	    tmp_b_gradients.OutputImageFromKernel.push_back(db);
 	}
 	__wGradient.push_back(tmp_w_gradients);
 	__bGradient.push_back(tmp_b_gradients);
@@ -1071,7 +1099,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	Matrix dw(__weightMatrixActive[k].Dimension());
 	// loop for batch
 	for(size_t i=0;i<M;i++){ 
-	    dw  = dw + __wGradient[i].SampleOutputImage[k];
+	    dw  = dw + __wGradient[i].OutputImageFromKernel[k];
 	}
 	dw = dw * float(__learningRate/(double)M); // gradients average over batch size
 
@@ -1099,7 +1127,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	Matrix db(1, 1);
 	// loop for batch
 	for(size_t i=0;i<M;i++){
-	    db = db + __bGradient[i].SampleOutputImage[k];
+	    db = db + __bGradient[i].OutputImageFromKernel[k];
 	}
 	db = db * float(__learningRate / (float)M);
 	__biasVector[k] = __biasVector[k] - db;

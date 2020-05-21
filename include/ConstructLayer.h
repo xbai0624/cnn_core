@@ -39,6 +39,7 @@ public:
     virtual void SetKernelSizeCNN(std::pair<size_t, size_t> s);
     void InitNeuronsCNN();
     void InitNeuronsFC();
+    void InitNeuronsInputLayer();
     void InitFilters();
 
     // hyper parameters
