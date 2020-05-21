@@ -110,11 +110,13 @@ Matrix Matrix::operator*(Matrix &B)
     // matrix multiply operation *: A*B = C
     if(this->size() == 0 || B.size() == 0) {
 	std::cout<<"Error: 0 Matrix."<<std::endl;
+	std::cout<<"    "<<this->size()<<" rows in left Matrix [times] "<<B.size()<<" rows in right Matrix."<<std::endl;
 	exit(0);
     }
 
     if((*this)[0].size() != B.size() ) {
 	std::cout<<"Error: Matrix not match."<<std::endl;
+	std::cout<<"    "<<(*this)[0].size()<<" collums in left Matrix [times] "<<B.size()<<" rows in right Matrix."<<std::endl;
 	exit(0);
     }
 

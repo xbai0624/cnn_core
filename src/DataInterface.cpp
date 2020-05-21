@@ -23,7 +23,7 @@ void DataInterface::test()
     //std::cout<<"input image: "<<std::endl<<image2<<std::endl;
 
 
-    __data.push_back(image);
+    __data.push_back(image2);
 }
 
 std::vector<Matrix>& DataInterface::GetNewBatch()

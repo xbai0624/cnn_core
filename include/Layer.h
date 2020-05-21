@@ -231,6 +231,7 @@ public:
     virtual float GetDropOutFactor()=0;
     virtual std::vector<Filter2D>& GetActiveFlag()=0;
     virtual std::pair<size_t, size_t> GetOutputImageSize() = 0; // used for setup layer
+    virtual int GetNumberOfNeurons() = 0;
     virtual int GetNumberOfNeuronsFC() = 0;
     virtual int GetID(){return __layerID;};
 

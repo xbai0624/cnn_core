@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     // test input layer
     Layer *layer_input;
     layer_input = new ConstructLayer(LayerType::input);
-    layer_input->Init();
+    layer_input->Init(); // check (need this one)
     cout<<"input layer test finished..."<<endl;
 
 
@@ -26,8 +26,8 @@ int main(int argc, char* argv[])
 
     // test layers
     l0 = new ConstructLayer(LayerType::fullyConnected, 20);
+    l0->SetPrevLayer(layer_input);
     l0->Init();
-    //l0->SetPrevLayer(layer_input);
     l0->EpochInit();
     l0->EnableDropOut();
     l0->BatchInit();
@@ -35,7 +35,6 @@ int main(int argc, char* argv[])
     l0->ForwardPropagate();
     auto images = l0->GetImagesA();
     cout<<"number of images: "<<images.size()<<endl;
-
 /*
     l1 = new ConstructLayer(LayerType::fullyConnected, 10);
     l1->Connect(l0, l2);

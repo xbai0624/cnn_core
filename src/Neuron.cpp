@@ -6,6 +6,8 @@
 #include "Neuron.h"
 #include "Matrix.h"
 
+using namespace std;
+
 long Neuron::__neuron_Count = 0;
 
 Neuron::Neuron()
@@ -102,17 +104,17 @@ void Neuron::UpdateZ()
     // update z for current layer
     if(__layer->GetType() == LayerType::fullyConnected)
     {
-        std::cout<<"fully connected layer update z"<<std::endl;
+        //std::cout<<"fully connected layer update z"<<std::endl;
 	UpdateZFC();
     } 
     else if(__layer->GetType() == LayerType::cnn)
     {
-        std::cout<<"cnn layer update z"<<std::endl;
+        //std::cout<<"cnn layer update z"<<std::endl;
 	UpdateZCNN();
     } 
     else if(__layer->GetType() == LayerType::pooling)
     {
-        std::cout<<"pooling layer update z"<<std::endl;
+        //std::cout<<"pooling layer update z"<<std::endl;
 	UpdateZPooling();
     } 
     else 
@@ -128,20 +130,28 @@ void Neuron::UpdateZFC()
     // currently layer and its previous layer are fully connected
     // weight matrix dimension will be: (1, M)
     auto _t = __previousLayer -> GetImagesA();
+    //cout<<"batch size: "<<_t.size()<<endl;
+    //cout<<"kernel number: "<<_t[0].GetNumberOfKernels()<<endl;
+    //cout<<" image dimension: "<<_t[0].OutputImageFromKernel[0].Dimension()<<endl;
     if(_t.size() < 1) 
     {
-	std::cout<<"Error: previous layer has not A image."<<std::endl;
+	std::cout<<"Error: previous layer has not 'A' image."<<std::endl;
 	exit(0);
     }
     Images &images = _t.back(); // get images for current sample
     if(images.OutputImageFromKernel.size() != 1) 
     {
-	std::cout<<"Eroor: layer type not match, expecting FC layer."<<std::endl;
+	std::cout<<"Eroor: layer type not match, expecting FC layer, FC layer should only have 1 kernel."<<std::endl;
 	exit(0);
     }
 
     Matrix &image = images.OutputImageFromKernel[0];
+    //cout<<"neuron id: "<<__neuron_id<<", image A debug:"<<endl;
+    //cout<<image<<endl;
 
+
+    //cout<<"weight matrix dimension: "<<(*__w).Dimension()<<endl;
+    //cout<<(*__w)<<endl;
     Matrix res = (*__w) * image;
     auto dim = res.Dimension();
     if(dim.first != 1 || dim.second != 1) 

@@ -79,10 +79,13 @@ public:
 
     // extract a value from neurons and re-organize these values in matrix form, only for current training sample
     virtual std::vector<Images>& GetImagesA();
+    void UpdateImagesA();
     // extract z value from neurons and re-organize these values in matrix form, only for current training sample
     virtual std::vector<Images>& GetImagesZ();
+    void UpdateImagesZ();
     // extract delta value from neurons and re-organize these values in matrix form, only for current training sample
     virtual std::vector<Images>& GetImagesDelta();
+    void UpdateImagesDelta();
     // Fill A matrix for input layer
     void ImplementInputLayerA();
 
@@ -122,6 +125,7 @@ public:
     virtual std::pair<size_t, size_t> GetOutputImageSize(); // used for setup layer
     virtual std::pair<size_t, size_t> GetOutputImageSizeCNN(); // used for setup layer
     virtual std::pair<size_t, size_t> GetOutputImageSizeFC(); // used for setup layer
+    virtual int GetNumberOfNeurons();
     virtual int GetNumberOfNeuronsFC();
 
 private:

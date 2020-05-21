@@ -53,6 +53,7 @@ void ConstructLayer::Init()
 	__p_data_interface = new DataInterface();
 	ImplementInputLayerA();
 	InitNeurons();
+	InitFilters(); // input layer need to init filters, make all neurons active
     }
     else  // other layer
     {
@@ -102,6 +103,11 @@ void ConstructLayer::BatchInit()
 
     // assign active weights and bias to neurons
     AssignWeightsAndBiasToNeurons();
+
+    // clear training information from last batch
+    __imageA.clear();
+    __imageZ.clear();
+    __imageDelta.clear();
 }
 
 void ConstructLayer::ProcessSample()
@@ -264,6 +270,7 @@ void ConstructLayer::InitNeuronsInputLayer()
 
     Matrix tmp = __imageA[0].OutputImageFromKernel[0]; // first sample
     auto dim = tmp.Dimension();
+    //cout<<"Info::input layer dimension: "<<dim<<endl;
     Pixel2D<Neuron*> image(dim.first, dim.second);
     for(size_t i=0;i<dim.first;i++)
     {
@@ -284,6 +291,13 @@ void ConstructLayer::InitFilters()
     __activeFlag.clear();
 
     // init filter 2d matrix, fill true value to all elements
+    if(__type == LayerType::input)
+    {
+	assert(__neurons.size() == 1);
+	auto dim = __neurons[0].Dimension();
+	Filter2D f(dim.first, dim.second);
+	__activeFlag.push_back(f);
+    }
     if(__type == LayerType::fullyConnected)
     {
 	assert(__neurons.size() == 1);
@@ -314,7 +328,7 @@ void  ConstructLayer::InitWeightsAndBias()
     if(__type == LayerType::fullyConnected)
     {
 	int n_prev = 0;
-	int n_curr = GetNumberOfNeuronsFC();
+	int n_curr = GetNumberOfNeurons();
 	if(__prevLayer == nullptr) // input layer
 	{
 	    std::cout<<"INFO: layer"<<GetID()
@@ -322,7 +336,7 @@ void  ConstructLayer::InitWeightsAndBias()
 		<<std::endl;
 	    n_prev = 10;
 	}
-	else n_prev = __prevLayer->GetNumberOfNeuronsFC();
+	else n_prev = __prevLayer->GetNumberOfNeurons();
 
 	Matrix w(n_curr, n_prev);
 	w.RandomGaus(0., 1./sqrt((float)n_curr)); // (0, sqrt(n_neuron)) normal distribution
@@ -362,7 +376,7 @@ void ConstructLayer::ForwardPropagate()
     //     ---) compute Z, A, A'(Z) for this layer
     //          these works are done neuron by neuron (neuron level)
 
-    cout<<"total neuron dimension: "<<__neuronDim<<endl; 
+    //cout<<"total neuron dimension: "<<__neuronDim<<endl; 
     for(size_t k=0;k<__neurons.size();k++)
     {
 	auto dim = __neurons[k].Dimension();
@@ -370,11 +384,11 @@ void ConstructLayer::ForwardPropagate()
 	{
 	    for(size_t j=0;j<dim.second;j++)
 	    {
-		cout<<"coord (i, j, k): ("<<i<<", "<<j<<", "<<k<<")"<<endl;
+		//cout<<"coord (i, j, k): ("<<i<<", "<<j<<", "<<k<<")"<<endl;
 		if(!__neurons[k][i][j]->IsActive()) continue;
 		__neurons[k][i][j] -> UpdateZ();
-		//__neurons[k][i][j] -> UpdateA();
-		//__neurons[k][i][j] -> UpdateSigmaPrime();
+		__neurons[k][i][j] -> UpdateA();
+		__neurons[k][i][j] -> UpdateSigmaPrime();
 	    }
 	}
     }
@@ -402,6 +416,9 @@ void ConstructLayer::BackwardPropagate()
 
 std::vector<Images>& ConstructLayer::GetImagesA()
 {
+    if(__type == LayerType::fullyConnected || __type == LayerType::cnn)
+        UpdateImagesA(); // append results from last sample
+
     return __imageA;
 }
 
@@ -425,14 +442,44 @@ void ConstructLayer::ImplementInputLayerA()
     }
 }
 
+void ConstructLayer::UpdateImagesA()
+{
+    size_t l = __imageA.size();
+
+    if(__type == LayerType::fullyConnected)
+    {
+    }
+    else if(__type == LayerType::cnn)
+    {
+    }
+    else
+    {
+    }
+}
+
 std::vector<Images>& ConstructLayer::GetImagesZ()
 {
+    if(__type == LayerType::fullyConnected || __type == LayerType::cnn)
+        UpdateImagesZ(); // append results from last sample
+ 
     return __imageZ;
 }
 
+void ConstructLayer::UpdateImagesZ()
+{
+}
+
+
 std::vector<Images>& ConstructLayer::GetImagesDelta()
 {
+    if(__type == LayerType::fullyConnected || __type == LayerType::cnn)
+        UpdateImagesDelta(); // append results from last sample
+ 
     return __imageDelta;
+}
+
+void ConstructLayer::UpdateImagesDelta()
+{
 }
 
 void ConstructLayer::UpdateCoordsForActiveNeuronFC()
@@ -741,7 +788,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
     // a lambda funtion for fc layer mapping original w&b matrix to active w&b matrix
     //   to comply with Neuron design, each active row of original w&b matrix will be 
     //   taken out and then form a matrix, then filled to active w&b matrix
-    //   so active w&b matrix will be composed of dimension (1, N) matrix
+    //   so active w&b matrix will be composed of dimension (1, N) matrix, and then each of them will be passed to neurons
     auto map_matrix_fc = [&](Matrix &ori_M, Filter2D &filter_M)
     {
 	auto dim = ori_M.Dimension();
@@ -1208,6 +1255,24 @@ std::pair<size_t, size_t> ConstructLayer::GetOutputImageSizeFC()
 {
     // used for setup cnn layer
     return std::pair<size_t, size_t>(__n_neurons_fc, 1);
+}
+
+int ConstructLayer::GetNumberOfNeurons()
+{
+    if(__type == LayerType::fullyConnected){
+	// used for setup fc layer
+	return __n_neurons_fc;
+    }
+    else if(__type == LayerType::input)
+    {
+        auto dim = __neurons[0].Dimension();
+	return static_cast<int>((dim.first * dim.second));
+    }
+    else
+    {
+        std::cout<<"Warning: GetNumberOfNeurons only work for fc and input layer."<<std::endl;
+        return 0;
+    }
 }
 
 int ConstructLayer::GetNumberOfNeuronsFC()
