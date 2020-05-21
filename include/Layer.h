@@ -9,6 +9,7 @@
 #include <vector>
 #include <cstddef> // size_t
 #include <utility>
+//#include <ostream>
 
 #include "Matrix.h"
 
@@ -24,7 +25,9 @@ enum class LayerType
 {
     fullyConnected,
     cnn,
-    pooling
+    pooling,
+    input, // input and output layer also require special treatment
+    output
 };
 
 
@@ -42,6 +45,50 @@ struct Filter2D
 
     Filter2D()
     {}
+
+    Filter2D(size_t i, size_t j)
+    {
+        __filter.resize(i, std::vector<bool>(j, true));
+    }
+
+    std::pair<size_t, size_t> Dimension()
+    {
+        if(__filter.size() == 0) return std::pair<size_t, size_t>(0, 0);
+        return std::pair<size_t, size_t>(__filter.size(), __filter[0].size());
+    }
+
+    std::vector<bool>& operator[](size_t i)
+    {
+        return __filter[i];
+    }
+};
+std::ostream & operator<<(std::ostream &, const Filter2D &t);
+
+// a 2d structure for organize neurons
+template <class T>
+struct Pixel2D
+{
+    std::vector<std::vector<T>> __plane;
+    Pixel2D()
+    {}
+
+    Pixel2D(size_t i, size_t j)
+    {
+        __plane.resize(i, std::vector<T>(j, 0));
+    }
+
+    std::pair<size_t, size_t> Dimension()
+    {
+        if(__plane.size() == 0) return std::pair<size_t, size_t>(0, 0);
+        return std::pair<size_t, size_t>(__plane.size(), __plane[0].size());
+    }
+
+    std::vector<T> & operator[](size_t i)
+    {
+        return __plane[i];
+    }
+
+
 };
 
 
@@ -59,20 +106,21 @@ struct NeuronCoord
     // this way it agrees with matrix: vector<vector<float>>
     size_t i, j, k;
     NeuronCoord(): 
-	i(-1), j(-1), k(-1) 
+	i(0), j(0), k(0) 
     {}
 
     NeuronCoord(size_t _i, size_t _j, size_t _k)
 	: i(_i), j(_j), k(_k) 
     {}
 };
+std::ostream & operator<<(std::ostream&, const NeuronCoord &c);
 
 
 // a struct holding layer output image of one single training sample
 // so each batch will have a vector of this struct
 struct Images
 {
-    std::vector<Matrix> SampleOutputImage;
+    std::vector<Matrix> SampleOutputImage; // this vector is for different cnn kernels 
 
     Images()
     {}
@@ -109,9 +157,14 @@ public:
     // external interfaces
     virtual void Init()=0; // overall init
     virtual void EpochInit()=0; // init before each epoch
+    virtual void Connect(Layer *prev=nullptr, Layer *next=nullptr) = 0;
+
+    // propagation
     virtual void ForwardPropagate() = 0;
     virtual void BackwardPropagate() = 0;
     virtual void UpdateWeightsAndBias() = 0;
+
+    // setup hyper parameters
     virtual void SetLearningRate(double) = 0;
     virtual void SetRegularizationMethod(Regularization) = 0;
     virtual void SetRegularizationParameter(double) = 0;
@@ -120,11 +173,16 @@ public:
     virtual void ProcessBatch()=0;
     virtual void PostProcessBatch()=0;
 
-    // interal interfaces
+    // internal interfaces
     virtual void BatchInit()=0;
+    virtual void InitFilters()=0;
     virtual void ProcessSample()=0;
     // a helper
+    virtual void SetNumberOfNeuronsFC(size_t n) = 0;
+    virtual void SetNumberOfKernelsCNN(size_t n) = 0;
+    virtual void SetKernelSizeCNN(std::pair<size_t, size_t> s) = 0;
     virtual void InitNeurons()=0;
+    virtual void InitWeightsAndBias()=0;
 
     // extract a value from neurons and re-organize these values in matrix form, only for current training sample
     virtual std::vector<Images>& GetImagesA()=0;
@@ -144,30 +202,42 @@ public:
 
     // drop out
     virtual void DropOut()=0;
+    virtual void EnableDropOut() = 0;
+    virtual void DisableDropOut() = 0;
 
     // update original weights and bias from active weights and bias
     virtual void TransferValueFromActiveToOriginal_WB()=0;
+    virtual void TransferValueFromOriginalToActive_WB()=0;
 
     // helpers
     virtual void UpdateImageForCurrentTrainingSample()=0;
     virtual void ClearImage()=0;
     virtual NeuronCoord GetActiveNeuronDimension()=0;
+    virtual void Print() = 0;
 
     // setters
     virtual void SetPoolingMethod(PoolingMethod)=0;
     virtual void SetCNNStride(int)=0;
     virtual void SetDropOutFactor(float)=0;
+    virtual void SetPrevLayer(Layer *) = 0;
+    virtual void SetNextLayer(Layer *) = 0;
+
     // getters
     virtual PoolingMethod & GetPoolingMethod()=0;
     virtual int GetCNNStride()=0;
     virtual std::vector<Matrix>* GetWeightMatrix()=0;
-    virtual std::vector<double>* GetBiasVector()=0;
+    virtual std::vector<Matrix>* GetBiasVector()=0;
     virtual LayerType GetType()=0;
     virtual float GetDropOutFactor()=0;
-    virtual std::vector<std::vector<std::vector<bool>>>& GetActiveFlag()=0;
+    virtual std::vector<Filter2D>& GetActiveFlag()=0;
+    virtual std::pair<size_t, size_t> GetOutputImageSize() = 0; // used for setup layer
+    virtual int GetNumberOfNeuronsFC() = 0;
+    virtual int GetID(){return __layerID;};
 
 private:
     // reserved section
+    static int __layerCount;
+    int __layerID = 0;
 };
 
 #endif

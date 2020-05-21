@@ -6,9 +6,13 @@
 #include "Neuron.h"
 #include "Matrix.h"
 
+long Neuron::__neuron_Count = 0;
+
 Neuron::Neuron()
 {
     // place holder
+    __neuron_id = __neuron_Count;
+    __neuron_Count++;
 }
 
 Neuron::~Neuron()
@@ -23,7 +27,7 @@ void Neuron::PassWeightPointer(Matrix *m)
     __w = m;
 }
 
-void Neuron::PassBiasPointer(double *_b)
+void Neuron::PassBiasPointer(Matrix *_b)
 {
     // pass bias pointer
     __b = _b;
@@ -96,16 +100,23 @@ void Neuron::SetNextLayer(Layer* l)
 void Neuron::UpdateZ()
 {
     // update z for current layer
-    if(__layer->GetType() == LayerType::fullyConnected){
+    if(__layer->GetType() == LayerType::fullyConnected)
+    {
+        std::cout<<"fully connected layer update z"<<std::endl;
 	UpdateZFC();
     } 
-    else if(__layer->GetType() == LayerType::cnn){
+    else if(__layer->GetType() == LayerType::cnn)
+    {
+        std::cout<<"cnn layer update z"<<std::endl;
 	UpdateZCNN();
     } 
-    else if(__layer->GetType() == LayerType::pooling){
+    else if(__layer->GetType() == LayerType::pooling)
+    {
+        std::cout<<"pooling layer update z"<<std::endl;
 	UpdateZPooling();
     } 
-    else {
+    else 
+    {
 	std::cout<<"Error: unsupported layer type."<<std::endl;
 	exit(0);
     }
@@ -125,8 +136,8 @@ void Neuron::UpdateZFC()
     Images &images = _t.back(); // get images for current sample
     if(images.SampleOutputImage.size() != 1) 
     {
-        std::cout<<"Eroor: layer type not match, expecting FC layer."<<std::endl;
-        exit(0);
+	std::cout<<"Eroor: layer type not match, expecting FC layer."<<std::endl;
+	exit(0);
     }
 
     Matrix &image = images.SampleOutputImage[0];
@@ -138,7 +149,7 @@ void Neuron::UpdateZFC()
 	std::cout<<"Error: wrong dimension, expecting 1D matrix."<<std::endl;
     }
     double z = res[0][0];
-    z = z + *__b;
+    z = z + (*__b)[0][0];
     __z.push_back(z);
 }
 
@@ -173,7 +184,7 @@ void Neuron::UpdateZCNN()
 	    }
 	}
     }
-    double z = res + (*__b);
+    double z = res + (*__b)[0][0];
     __z.push_back(z);
 }
 
@@ -184,8 +195,8 @@ void Neuron::UpdateZPooling()
     auto inputImage = __previousLayer->GetImagesA();
     if(inputImage.back().SampleOutputImage.size() < __coord.k)
     {
-        // output image for current sample
-        // for pooling layer, number of kernels (previous layer)  = number of kernels (current layer)
+	// output image for current sample
+	// for pooling layer, number of kernels (previous layer)  = number of kernels (current layer)
 	std::cout<<"Error: pooling operation matrix dimension not match"<<std::endl;
 	exit(0);
     }
@@ -243,7 +254,8 @@ void Neuron::UpdateA()
     __a.push_back(a);
 }
 
-void Neuron::UpdateSigmaPrime(){
+void Neuron::UpdateSigmaPrime()
+{
     // update sigma^prime
     if(__sigmaPrime.size() != __z.size()-1) 
     {
@@ -279,7 +291,8 @@ void Neuron::UpdateSigmaPrime(){
     __sigmaPrime.push_back(sigma_prime);
 }
 
-void Neuron::UpdateDelta(){
+void Neuron::UpdateDelta()
+{
     // update delta for current layer
     if(__layer->GetType() == LayerType::fullyConnected)
     {
@@ -403,7 +416,7 @@ void Neuron::UpdateDeltaPooling()
     {
 	// error
 	std::cout<<"Error: something wrong happend in error back propagation for pooling layer."<<std::endl;
-        std::cout<<"       a matrix should be already calculated."<<std::endl;
+	std::cout<<"       a matrix should be already calculated."<<std::endl;
 	exit(0);
     }
 
@@ -433,8 +446,8 @@ void Neuron::UpdateDeltaPooling()
     {
 	// get all related input neurons, check if this neuron is the max one
 	auto a_matrix_current_layer_vec = __layer->GetImagesA(); // batch images
-        Images &image_current_sample = a_matrix_current_layer_vec.back(); // current sample
-        std::vector<Matrix> & matrix_current_sample = image_current_sample.SampleOutputImage; // matrix
+	Images &image_current_sample = a_matrix_current_layer_vec.back(); // current sample
+	std::vector<Matrix> & matrix_current_sample = image_current_sample.SampleOutputImage; // matrix
 
 	Matrix a_matrix = matrix_current_sample[__coord.k];
 	double _tmp = 0;
@@ -493,4 +506,16 @@ NeuronCoord Neuron::GetCoord()
 {
     // get neuron coord
     return __coord;
+}
+
+void Neuron::Print()
+{
+    std::cout<<"--------------------------------------"<<std::endl;
+    std::cout<<"neuron id: "<<__neuron_id<<std::endl;
+    std::cout<<"active status: "<<__active_status<<std::endl;
+    if(!__active_status) return;
+    std::cout<<"w matrix: "<<std::endl;
+    std::cout<<(*__w);
+    std::cout<<"bias: "<<std::endl;
+    std::cout<<(*__b);
 }

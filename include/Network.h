@@ -8,7 +8,23 @@ class Network
 {
 public:
     Network();
+
+    template<typename T>
+        Network(T l)
+        {
+            __layers.push_back(dynamic_cast<Layer*>(l));
+        }
+
+    template<typename T, typename... Args>
+        Network(T l, Args... pars)
+        {
+            Network(pars...);
+        }
+
     ~Network();
+
+    // inits
+    void Init();
 
     // training procedures
     void UpdateBatch();

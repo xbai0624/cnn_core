@@ -1,8 +1,8 @@
 /*
  * neuron class
  *     the weights are defined as a matrix, so we can unify cnn neurons and MLP neurons
- *     MLP neurons weight matrix dimension is (1, n); cnn neuron weight matrix 
- *     dimension is (m, n)
+ *         --MLP neurons weight matrix dimension is (1, n); 
+ *         --CNN neuron weight matrix dimension is (m, n) --- each CNN neuron will have one independent copy of its corresponding kernel
  *
  *     cnn neuron and mlp neuron all only have one bias;
  */
@@ -33,7 +33,7 @@ public:
     ~Neuron();
 
     void PassWeightPointer(Matrix *);
-    void PassBiasPointer(double *);
+    void PassBiasPointer(Matrix *);
 
     bool IsActive(); // for dropout
     void Disable();
@@ -74,15 +74,20 @@ public:
     std::vector<double> & GetZVector();
     NeuronCoord GetCoord();
 
+    // 
+    void Print();
+
 private:
+    static long __neuron_Count;
+    long __neuron_id;
     Matrix *__w;  // weights
-    double *__b;  // bias
+    Matrix *__b;  // bias : should be a 1 element matrix
 
     // for batch training, after each batch, these vectors will be cleared for next batch
     std::vector<double> __a; // the length is dependent on training batch size
     std::vector<double> __delta;
     std::vector<double> __z;
-    std::vector<double> __sigmaPrime;
+    std::vector<double> __sigmaPrime; // derivative of Z
 
     // the layer that this neurons belongs to
     Layer *__layer;
@@ -93,7 +98,7 @@ private:
     // some neurons in a layer
     bool __active_status = true; 
     // actuation function type used in this neuron
-    ActuationFuncType __funcType = ActuationFuncType::Relu;
+    ActuationFuncType __funcType = ActuationFuncType::Sigmoid;
 
     NeuronCoord __coord; // active coordinates
 };

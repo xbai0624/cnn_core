@@ -10,6 +10,13 @@ Network::~Network()
     // place holder
 }
 
+void Network::Init()
+{
+    // init layers
+    for(auto &i: __layers)
+        i->Init();
+}
+
 void Network::UpdateBatch()
 {
     ForwardPropagate();
@@ -26,8 +33,8 @@ void Network::ForwardPropagate()
 void Network::BackwardPropagate() 
 {
     // backward
-    size_t NLayers = __layers.size();
-    for(size_t i=NLayers-1; i>=0;i--)
+    int NLayers = __layers.size();
+    for(int i=NLayers-1; i>=0;i--)
         __layers[i]->BackwardPropagate();
 }
 

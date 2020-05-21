@@ -4,12 +4,14 @@
 #include "Layer.h"
 
 class Neuron;
+class DataInterface;
 
 /***********************************************************************************
  *
- * Purely fully connected layer: 
- *     means: its previous layer is a vertical layer (single collumn of neurons)
- *            its next layer is also a vertical layer ( single collumn of neurons)
+ * Construct specific layer
+ *
+ *     NOTE: 
+ *          Multithreading will be applied inside batch, namely on sample level
  *
  ***********************************************************************************/
 
@@ -17,11 +19,42 @@ class ConstructLayer: public Layer
 {
 public:
     ConstructLayer();
+    ConstructLayer(LayerType t); // for input layer
+    ConstructLayer(LayerType t, int n_neurons); // for fc layer and output layer
+    ConstructLayer(LayerType t, int n_kernels, std::pair<size_t, size_t> d); // for cnn layer
     ~ConstructLayer();
 
     // external interfaces
     virtual void Init(); // overall init
+    virtual void InitNeurons();
+    virtual void InitWeightsAndBias();
+    virtual void Connect(Layer* prev=nullptr, Layer* next=nullptr);
+
+    // interface
     virtual void EpochInit();
+    virtual void BatchInit();
+
+    virtual void SetNumberOfNeuronsFC(size_t n);
+    virtual void SetNumberOfKernelsCNN(size_t n);
+    virtual void SetKernelSizeCNN(std::pair<size_t, size_t> s);
+    void InitNeuronsCNN();
+    void InitNeuronsFC();
+    void InitFilters();
+
+    // hyper parameters
+    virtual void SetLearningRate(double);
+    virtual void SetRegularizationMethod(Regularization);
+    virtual void SetRegularizationParameter(double);
+    virtual void EnableDropOut();
+    virtual void DisableDropOut();
+    // setters
+    virtual void SetPoolingMethod(PoolingMethod);
+    virtual void SetCNNStride(int);
+    virtual void SetDropOutFactor(float);
+    virtual void SetPrevLayer(Layer *);
+    virtual void SetNextLayer(Layer *);
+
+    //
     virtual void ForwardPropagate();
     virtual void BackwardPropagate();
 
@@ -36,20 +69,12 @@ public:
     void UpdateWeightsAndBiasGradientsCNN();
     void UpdateWeightsAndBiasGradientsPooling();
 
-    // hyper parameters
-    virtual void SetLearningRate(double);
-    virtual void SetRegularizationMethod(Regularization);
-    virtual void SetRegularizationParameter(double);
-
     //after each batch process, we update weights and bias
     virtual void ProcessBatch();
     virtual void PostProcessBatch();
 
     // interal interfaces
-    virtual void BatchInit();
     virtual void ProcessSample();
-    // a helper
-    virtual void InitNeurons();
 
     // extract a value from neurons and re-organize these values in matrix form, only for current training sample
     virtual std::vector<Images>& GetImagesA();
@@ -57,11 +82,12 @@ public:
     virtual std::vector<Images>& GetImagesZ();
     // extract delta value from neurons and re-organize these values in matrix form, only for current training sample
     virtual std::vector<Images>& GetImagesDelta();
+    // Fill A matrix for input layer
+    void ImplementInputLayerA();
 
     // get active neuron flags
     //virtual std::vector<std::vector<std::vector<NeuronCoord>>>& GetActiveNeuronFlags();
-    virtual void UpdateCoordsForActiveNeuronFC(); // re-assign coordinates to active neurons
-
+    virtual void UpdateCoordsForActiveNeuronFC(); // re-assign coordinates to active neurons; for drop-out 
     virtual void UpdateActiveWeightsAndBias(); // update active weights and bias matrix for active neurons/weight matrix
 
     // assign weights and bias to neurons
@@ -70,34 +96,49 @@ public:
     // drop out
     virtual void DropOut();
 
-    // update active flag FC; heler function for FC; CNN layer doesn't need it,
-    // the updateActiveFlagCNN() function are incoporated in DropOutCNN() function
+    // update active flag FC; heler function for FC;
     void __UpdateActiveFlagFC();
+    void __UpdateActiveFlagCNN();
  
     // update original weights and bias from active weights and bias
     virtual void TransferValueFromActiveToOriginal_WB();
+    virtual void TransferValueFromOriginalToActive_WB();
 
     // helpers
     virtual void UpdateImageForCurrentTrainingSample();
     virtual void ClearImage();
     virtual NeuronCoord GetActiveNeuronDimension();
+    virtual void Print();
 
-    // setters
-    virtual void SetDropOutFactor(float);
     // getters
+    virtual PoolingMethod & GetPoolingMethod();
+    virtual int GetCNNStride();
     virtual std::vector<Matrix>* GetWeightMatrix();
-    virtual std::vector<double>* GetBiasVector();
+    virtual std::vector<Matrix>* GetBiasVector();
     virtual LayerType GetType();
     virtual float GetDropOutFactor();
-    virtual std::vector<std::vector<std::vector<bool>>>& GetActiveFlag();
+    virtual std::vector<Filter2D>& GetActiveFlag();
+    virtual std::pair<size_t, size_t> GetOutputImageSize(); // used for setup layer
+    virtual std::pair<size_t, size_t> GetOutputImageSizeCNN(); // used for setup layer
+    virtual std::pair<size_t, size_t> GetOutputImageSizeFC(); // used for setup layer
+    virtual int GetNumberOfNeuronsFC();
 
 private:
     // 1):
     LayerType __type = LayerType::fullyConnected;
 
+    // for setup fc layer
+    size_t __n_neurons_fc = 0;
+    // for setup cnn layer
+    size_t __n_kernels_cnn = 0;
+    std::pair<size_t, size_t> __kernelDim;
+    // for setup cnn layer
+    // during setup, output image size should be already decided
+    std::pair<size_t, size_t> __outputImageSizeCNN;
+
     // 2):
     // this 3D matrix keeps all neurons in current layer
-    std::vector<std::vector<std::vector<Neuron*>>> __neurons; // for MLPs, neurons will be in vertical vector form 
+    std::vector<Pixel2D<Neuron*>> __neurons; // for MLPs, neurons will be in vertical vector form 
     // we will follow exactly the Math form, so for FC layer, it has only one vertical form neurons
     // __neruons.size() = 1; __neurons[0].size() = N (layer size); __neruons[0][0].size() = 1;
 
@@ -124,14 +165,15 @@ private:
     Regularization __regularizationMethod = Regularization::L2;
     double __regularizationParameter = 0.0; // default to 0. 
 
-
     // 3):
     // active weight matrix and active vector bias --for dropout algorithm
+    // for cnn layer, each matrix in this vector corresponds to a kernel
+    // for fc layer, each matrix in this vector corresponds to a row of the original w&b, for easier to assign them to neurons
     std::vector<Matrix> __weightMatrixActive;
     std::vector<Matrix> __biasVectorActive;
 
     // 4):
-    // this 3D matrix flags active neurons for FC, active weight matrix element for CNN
+    // this 3D matrix filters out active neurons for FC, active weight matrix element for CNN
     std::vector<Filter2D> __activeFlag;
 
     // 5):
@@ -149,15 +191,21 @@ private:
     NeuronCoord __activeNeuronDim;
 
     // 7):
+    bool __use_drop_out = false;
     // dropout factor
     float __dropOut = 0.5;
     // stride, for now x-y share the same stride
     // for now, only use 1. Other values will be implemented with future improvements
     int __cnnStride = 1; 
+    PoolingMethod __poolingMethod = PoolingMethod::Max;
  
     // 8):
     Layer* __prevLayer = nullptr;
     Layer* __nextLayer = nullptr;
+
+    // 9):
+    // an interface for processing input image
+    DataInterface *__p_data_interface = nullptr;
 };
 
 #endif

@@ -1,23 +1,33 @@
+# ################################################ 
+#      a simplified multipurpose makefile
+# ################################################
+#
+CC		:= g++
+Compile_Flags	:= -Wall -Wextra -g -std=c++11 -O2 -pthread
+
+# these options for generating library
 Target		:= main
 
-CC		:= g++
-CXXFLAGS	:= -std=c++11 -Wall -g -O2
-
-INC_DIR		:= -Iinclude -I../matrix/include 
-LIBS		:= -L../matrix/lib -lMatrix 
+INCS		:= -I./include
 
 SRCS		:= $(wildcard src/*.cpp)
-OBJS		:= $(addprefix obj/, $(patsubst %.cpp,%.o,$(notdir ${SRCS})))
-LIB_OBJ		:= lib/libcnn_core.so
+OBJS		:= $(addprefix obj/, $(patsubst %.cpp, %.o, $(notdir ${SRCS})))
 
-${Target}: ${LIB_OBJ} obj/main.o
-	${CC} ${CXXFLAGS} ${INC_DIR} ${LIBS} -Llib -lcnn_core -o $@ $^
+objects = ${OBJS} # static patterns
 
-${LIB_OBJ}: $(filter-out obj/main.o,${OBJS})
-	ar cr $@ $^ 
+all: ${Target}
 
-obj/%.o:src/%.cpp
-	${CC} ${CXXFLAGS} ${INC_DIR} ${LIB_DIR} -o $@ -c $^
+# generate executable
+${Target}: ${OBJS}
+	${CC} ${Compile_Flags} -o $@ $^ ${INCS}
+
+# static patterns
+${objects}: obj/%.o: src/%.cpp
+	${CC} ${Compile_Flags} -o $@ -c $< ${INCS}
 
 clean:
-	rm -rf ${Target} ${OBJS} ${LIB_OBJ}
+	@rm -rf obj/* ${Target}
+	@rm -rf ${OBJS}
+
+test:
+	@echo ${OBJS}
