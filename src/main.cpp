@@ -51,5 +51,6 @@ int main(int argc, char* argv[])
     l2->Print();
 */
 
+    cout<<"MAIN TEST SUCCESS!!!"<<endl;
     return 0;
 }

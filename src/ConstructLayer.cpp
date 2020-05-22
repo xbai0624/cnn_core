@@ -392,6 +392,10 @@ void ConstructLayer::ForwardPropagate()
 	    }
 	}
     }
+
+    // when propagation for this layer is done, update the A, Z matrices
+    UpdateImagesA();
+    UpdateImagesZ();
 }
 
 void ConstructLayer::BackwardPropagate()
@@ -412,13 +416,13 @@ void ConstructLayer::BackwardPropagate()
 	    }
 	}
     }
+
+    // when propagation for this layer is done, update the Delta matrices
+    UpdateImagesDelta();
 }
 
 std::vector<Images>& ConstructLayer::GetImagesA()
 {
-    if(__type == LayerType::fullyConnected || __type == LayerType::cnn)
-        UpdateImagesA(); // append results from last sample
-
     return __imageA;
 }
 
@@ -442,44 +446,260 @@ void ConstructLayer::ImplementInputLayerA()
     }
 }
 
+static Matrix filterMatrix(Matrix &A, Filter2D &F)
+{
+    // this function takes out all active elements from A according to F
+    //       and return them in another matrix
+    //       the filter info is given in matrix F
+    auto dimA = A.Dimension();
+    auto dimF = F.Dimension();
+    assert(dimA == dimF);
+
+    vector<vector<float>> R;
+    for(size_t i=0;i<dimA.first;i++)
+    {
+	vector<float> _tmp_row;
+	for(size_t j=0;j<dimA.second;j++)
+	{
+	    if(F[i][j]==1)
+	    {
+		_tmp_row.push_back(A[i][j]);
+	    }
+	    else if(F[i][j] != 0)
+	    {
+		std::cout<<"Error: filter matrix element value must be 0 or 1"<<std::endl;
+		exit(0);
+	    }
+	}
+	if(_tmp_row.size() > 0)
+	    R.push_back(_tmp_row);
+    }
+    Matrix Ret(R);
+    return Ret;
+}
+
 void ConstructLayer::UpdateImagesA()
 {
+    // __imageA shold only store images from all active neurons, the matching info can be achieved from filter matrix
+    //    drop out only happens on batch level
+    //    so imageA will clear after each batch is done
+    //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix inside a batch
     size_t l = __imageA.size();
 
-    if(__type == LayerType::fullyConnected)
+    // extract the A matrices from neurons for current traning sample
+    Images sample_image_A;
+
+    if(__type == LayerType::fullyConnected) // for fully connected layer
     {
+	for(size_t k=0;k<__neuronDim.k;k++) // kernel
+	{
+	    Matrix A( __neuronDim.i, __neuronDim.j);
+	    for(size_t i=0;i<__neuronDim.i;i++){
+		for(size_t j=0;j<__neuronDim.j;j++)
+		{
+		    auto a_vector = __neurons[k][i][j]->GetAVector();
+		    if(__neurons[k][i][j]->IsActive())
+		    {  // make sure no over extract
+			assert(a_vector.size() - 1 == l);
+			A[i][j] = a_vector.back();
+		    }
+		    else
+		    {
+			A[i][j] = 0;
+		    }
+		}
+	    }
+	    // only save active elements
+	    Matrix R = filterMatrix(A, __activeFlag[k]);
+	    sample_image_A.OutputImageFromKernel.push_back(R);
+
+	    assert(R.Dimension().first  == __activeNeuronDim.i);
+	    assert(R.Dimension().second == __activeNeuronDim.j);
+	}
+	__imageA.push_back(sample_image_A);
     }
-    else if(__type == LayerType::cnn)
+    else if(__type == LayerType::cnn) // for cnn layer
     {
+	// for cnn, drop out happens on kernels (weight matrix)
+	// so the neurons are all active
+	for(size_t k=0;k<__neuronDim.k;k++) // kernel
+	{
+	    Matrix A( __neuronDim.i, __neuronDim.j);
+	    for(size_t i=0;i<__neuronDim.i;i++){
+		for(size_t j=0;j<__neuronDim.j;j++)
+		{
+		    auto a_vector = __neurons[k][i][j]->GetAVector();
+		    if(__neurons[k][i][j]->IsActive())
+		    {  // make sure no over extract
+			assert(a_vector.size() - 1 == l);
+			A[i][j] = a_vector.back();
+		    }
+		    else
+		    {
+			A[i][j] = 0;
+		    }
+		}
+	    }
+	    sample_image_A.OutputImageFromKernel.push_back(A); // no need to filter
+	}
+	__imageA.push_back(sample_image_A);
     }
-    else
+    else // for other layer types
     {
     }
 }
 
 std::vector<Images>& ConstructLayer::GetImagesZ()
 {
-    if(__type == LayerType::fullyConnected || __type == LayerType::cnn)
-        UpdateImagesZ(); // append results from last sample
- 
     return __imageZ;
 }
 
 void ConstructLayer::UpdateImagesZ()
 {
+    // __imageZ shold only store images from all active neurons, the matching info can be achieved from filter matrix
+    //    drop out only happens on batch level
+    //    so imageZ will clear after each batch is done
+    //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix on batch level
+    size_t l = __imageZ.size();
+
+    // extract the A matrices from neurons for current traning sample
+    Images sample_image_Z;
+
+    if(__type == LayerType::fullyConnected) // for fully connected layer
+    {
+	for(size_t k=0;k<__neuronDim.k;k++) // kernel
+	{
+	    Matrix Z( __neuronDim.i, __neuronDim.j);
+	    for(size_t i=0;i<__neuronDim.i;i++){
+		for(size_t j=0;j<__neuronDim.j;j++)
+		{
+		    auto z_vector = __neurons[k][i][j]->GetZVector();
+		    if(__neurons[k][i][j]->IsActive())
+		    {  // make sure no over extract
+			assert(z_vector.size() - 1 == l);
+			Z[i][j] = z_vector.back();
+		    }
+		    else
+		    {
+			Z[i][j] = 0;
+		    }
+		}
+	    }
+	    // only save active elements
+	    Matrix R = filterMatrix(Z, __activeFlag[k]);
+	    sample_image_Z.OutputImageFromKernel.push_back(R);
+
+	    assert(R.Dimension().first  == __activeNeuronDim.i);
+	    assert(R.Dimension().second == __activeNeuronDim.j);
+	}
+	__imageZ.push_back(sample_image_Z);
+    }
+    else if(__type == LayerType::cnn) // for cnn layer
+    {
+	// for cnn, drop out happens on kernels (weight matrix)
+	// so the neurons are all active
+	for(size_t k=0;k<__neuronDim.k;k++) // kernel
+	{
+	    Matrix Z( __neuronDim.i, __neuronDim.j);
+	    for(size_t i=0;i<__neuronDim.i;i++){
+		for(size_t j=0;j<__neuronDim.j;j++)
+		{
+		    auto z_vector = __neurons[k][i][j]->GetZVector();
+		    if(__neurons[k][i][j]->IsActive())
+		    {  // make sure no over extract
+			assert(z_vector.size() - 1 == l);
+			Z[i][j] = z_vector.back();
+		    }
+		    else
+		    {
+			Z[i][j] = 0;
+		    }
+		}
+	    }
+	    sample_image_Z.OutputImageFromKernel.push_back(Z); // no need to filter
+	}
+	__imageZ.push_back(sample_image_Z);
+    }
+    else // for other layer types
+    {
+    }
 }
 
 
 std::vector<Images>& ConstructLayer::GetImagesDelta()
 {
-    if(__type == LayerType::fullyConnected || __type == LayerType::cnn)
-        UpdateImagesDelta(); // append results from last sample
- 
     return __imageDelta;
 }
 
 void ConstructLayer::UpdateImagesDelta()
 {
+    // __imageZ shold only store images from all active neurons, the matching info can be achieved from filter matrix
+    //    drop out only happens on batch level
+    //    so imageZ will clear after each batch is done
+    //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix on batch level
+    size_t l = __imageDelta.size();
+
+    // extract the A matrices from neurons for current traning sample
+    Images sample_image_delta;
+
+    if(__type == LayerType::fullyConnected) // for fully connected layer
+    {
+	for(size_t k=0;k<__neuronDim.k;k++) // kernel
+	{
+	    Matrix Delta( __neuronDim.i, __neuronDim.j);
+	    for(size_t i=0;i<__neuronDim.i;i++){
+		for(size_t j=0;j<__neuronDim.j;j++)
+		{
+		    auto delta_vector = __neurons[k][i][j]->GetDeltaVector();
+		    if(__neurons[k][i][j]->IsActive())
+		    {  // make sure no over extract
+			assert(delta_vector.size() - 1 == l);
+			Delta[i][j] = delta_vector.back();
+		    }
+		    else
+		    {
+			Delta[i][j] = 0;
+		    }
+		}
+	    }
+	    // only save active elements
+	    Matrix R = filterMatrix(Delta, __activeFlag[k]);
+	    sample_image_delta.OutputImageFromKernel.push_back(R);
+
+	    assert(R.Dimension().first  == __activeNeuronDim.i);
+	    assert(R.Dimension().second == __activeNeuronDim.j);
+	}
+	__imageDelta.push_back(sample_image_delta);
+    }
+    else if(__type == LayerType::cnn) // for cnn layer
+    {
+	// for cnn, drop out happens on kernels (weight matrix)
+	// so the neurons are all active
+	for(size_t k=0;k<__neuronDim.k;k++) // kernel
+	{
+	    Matrix Delta( __neuronDim.i, __neuronDim.j);
+	    for(size_t i=0;i<__neuronDim.i;i++){
+		for(size_t j=0;j<__neuronDim.j;j++)
+		{
+		    auto delta_vector = __neurons[k][i][j]->GetDeltaVector();
+		    if(__neurons[k][i][j]->IsActive())
+		    {  // make sure no over extract
+			assert(delta_vector.size() - 1 == l);
+			Delta[i][j] = delta_vector.back();
+		    }
+		    else
+		    {
+			Delta[i][j] = 0;
+		    }
+		}
+	    }
+	    sample_image_delta.OutputImageFromKernel.push_back(Delta); // no need to filter
+	}
+	__imageDelta.push_back(sample_image_delta);
+    }
+    else // for other layer types
+    {
+    }
 }
 
 void ConstructLayer::UpdateCoordsForActiveNeuronFC()
@@ -842,6 +1062,18 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
     else if (__type == LayerType::fullyConnected)
     {
 	map_matrix_fc(__weightMatrix[0], __activeFlag[0]);
+    }
+
+    // update active neuron coord after drop out
+    if(__type == LayerType::cnn)
+    {
+	__activeNeuronDim = __neuronDim; // drop out not happening on neurons, so dimension stays same
+    }
+    else if(__type == LayerType::fullyConnected)
+    {
+	__activeNeuronDim = __neuronDim; // update active neuron dimension
+	size_t active_neurons = __weightMatrixActive.size();
+	__activeNeuronDim.i = active_neurons;
     }
 
     std::cout<<"Debug: Layer:"<<GetID()<<" TransferValueFromOriginalToActiveWB() done."<<std::endl;
@@ -1265,13 +1497,13 @@ int ConstructLayer::GetNumberOfNeurons()
     }
     else if(__type == LayerType::input)
     {
-        auto dim = __neurons[0].Dimension();
+	auto dim = __neurons[0].Dimension();
 	return static_cast<int>((dim.first * dim.second));
     }
     else
     {
-        std::cout<<"Warning: GetNumberOfNeurons only work for fc and input layer."<<std::endl;
-        return 0;
+	std::cout<<"Warning: GetNumberOfNeurons only work for fc and input layer."<<std::endl;
+	return 0;
     }
 }
 
