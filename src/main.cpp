@@ -12,29 +12,28 @@ int main(int argc, char* argv[])
     DataInterface data_interface;
     data_interface.test();
 
-
     // test input layer
     Layer *layer_input;
     layer_input = new ConstructLayer(LayerType::input);
     layer_input->Init(); // check (need this one)
     cout<<"input layer test finished..."<<endl;
 
-
-    Layer *l0, *l1, *l2;
+    Layer *l0, *l1, *l2, *layer_output;
 
     // test network
 
     // test layers
     l0 = new ConstructLayer(LayerType::fullyConnected, 20);
     l0->SetPrevLayer(layer_input);
+    l0->SetNextLayer(layer_output);
     l0->Init();
     l0->EpochInit();
     l0->EnableDropOut();
     l0->BatchInit();
     //l0->Print();
-    l0->ForwardPropagate();
+    l0->ForwardPropagateForSample();
     auto images = l0->GetImagesA();
-    cout<<"number of images: "<<images.size()<<endl;
+    cout<<" number of images: "<<images.size()<<endl;
 /*
     l1 = new ConstructLayer(LayerType::fullyConnected, 10);
     l1->Connect(l0, l2);
@@ -50,6 +49,16 @@ int main(int argc, char* argv[])
     l2->BatchInit();
     l2->Print();
 */
+
+    // test output layer
+    layer_output = new ConstructLayer(LayerType::output, 10); // output layer must be a fully connected layer
+    layer_output -> SetPrevLayer(l0);
+    layer_output -> Init();
+    layer_output -> EpochInit(); // output layer no dropout
+    layer_output -> BatchInit();
+    //layer_output->Print();
+    layer_output -> ComputeCostInOutputLayerForCurrentSample(); // output layer needs to compute cost function
+
 
     cout<<"MAIN TEST SUCCESS!!!"<<endl;
     return 0;

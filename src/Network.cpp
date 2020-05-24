@@ -19,27 +19,31 @@ void Network::Init()
 
 void Network::UpdateBatch()
 {
-    ForwardPropagate();
-    BackwardPropagate();
+    ForwardPropagateForBatch();
+    BackwardPropagateForBatch();
     UpdateWeightsAndBias();
 }
 
-void Network::ForwardPropagate()
+void Network::ForwardPropagateForBatch()
 {
-    for(auto &i: __layers)
-        i->ForwardPropagate();
+    int sample_size = 0;
+    for(int i=0;i<sample_size;i++)
+    {
+	for(auto &i: __layers)
+	    i->ForwardPropagateForSample();
+    }
 }
 
-void Network::BackwardPropagate() 
+void Network::BackwardPropagateForBatch() 
 {
     // backward
     int NLayers = __layers.size();
     for(int i=NLayers-1; i>=0;i--)
-        __layers[i]->BackwardPropagate();
+	__layers[i]->BackwardPropagateForBatch();
 }
 
 void Network::UpdateWeightsAndBias()
 {
     for(auto &i: __layers)
-        i->UpdateWeightsAndBias();
+	i->UpdateWeightsAndBias();
 }

@@ -28,8 +28,8 @@ public:
 
     // training procedures
     void UpdateBatch();
-    void ForwardPropagate();
-    void BackwardPropagate();
+    void ForwardPropagateForBatch();
+    void BackwardPropagateForBatch();
     void UpdateWeightsAndBias();
     float GetCost();
 

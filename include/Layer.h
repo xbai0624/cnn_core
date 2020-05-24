@@ -37,6 +37,13 @@ enum class Regularization
     L1
 };
 
+enum class CostFuncType
+{
+    cross_entropy,
+    log_likelihood,
+    quadratic_sum
+};
+
 
 // a 2d matrix for mask out neurons
 struct Filter2D
@@ -160,9 +167,10 @@ public:
     virtual void Connect(Layer *prev=nullptr, Layer *next=nullptr) = 0;
 
     // propagation
-    virtual void ForwardPropagate() = 0;
-    virtual void BackwardPropagate() = 0;
+    virtual void ForwardPropagateForSample() = 0;
+    virtual void BackwardPropagateForBatch() = 0;
     virtual void UpdateWeightsAndBias() = 0;
+    virtual void ComputeCostInOutputLayerForCurrentSample() = 0;
 
     // setup hyper parameters
     virtual void SetLearningRate(double) = 0;
@@ -221,6 +229,7 @@ public:
     virtual void SetDropOutFactor(float)=0;
     virtual void SetPrevLayer(Layer *) = 0;
     virtual void SetNextLayer(Layer *) = 0;
+    virtual void SetCostFuncType(CostFuncType t) = 0;
 
     // getters
     virtual PoolingMethod & GetPoolingMethod()=0;

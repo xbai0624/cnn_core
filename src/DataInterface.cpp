@@ -24,6 +24,11 @@ void DataInterface::test()
 
 
     __data.push_back(image2);
+
+    // label for this image
+    Matrix label1(std::pair<int, int>(10, 1), 0);
+    label1[0][0] = 1.;
+    __label.push_back(label1);
 }
 
 std::vector<Matrix>& DataInterface::GetNewBatch()
@@ -38,6 +43,21 @@ std::vector<Matrix>& DataInterface::GetNewBatch()
     //
 
     return __data;
+}
+
+
+std::vector<Matrix>& DataInterface::GetNewBatchLabel()
+{
+    //
+    //  here fill new batch of data
+    //
+    //  __label.clear();
+    //  ...
+    //
+    //  to be continued ...
+    //
+
+    return __label;
 }
 
 

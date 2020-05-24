@@ -35,6 +35,19 @@ void Neuron::PassBiasPointer(Matrix *_b)
     __b = _b;
 }
 
+void Neuron::ForwardPropagateForSample()
+{
+    UpdateZ();
+    UpdateA();
+    UpdateSigmaPrime();
+}
+
+void Neuron::BackwardPropagateForBatch()
+{
+    UpdateDelta();
+}
+
+
 double Neuron::__sigmoid(double z)
 {
     return 1/(1 + exp(-z));
@@ -99,22 +112,28 @@ void Neuron::SetNextLayer(Layer* l)
     __nextLayer = l;
 }
 
+void Neuron::SetActuationFuncType(ActuationFuncType t)
+{
+    // set neurons's actuation function type
+    __funcType = t;
+}
+
 void Neuron::UpdateZ()
 {
     // update z for current layer
-    if(__layer->GetType() == LayerType::fullyConnected)
+    if(__layer->GetType() == LayerType::fullyConnected || __layer->GetType() == LayerType::output)
     {
-        //std::cout<<"fully connected layer update z"<<std::endl;
+	//std::cout<<"fully connected layer update z"<<std::endl;
 	UpdateZFC();
     } 
     else if(__layer->GetType() == LayerType::cnn)
     {
-        //std::cout<<"cnn layer update z"<<std::endl;
+	//std::cout<<"cnn layer update z"<<std::endl;
 	UpdateZCNN();
     } 
     else if(__layer->GetType() == LayerType::pooling)
     {
-        //std::cout<<"pooling layer update z"<<std::endl;
+	//std::cout<<"pooling layer update z"<<std::endl;
 	UpdateZPooling();
     } 
     else 
@@ -153,6 +172,8 @@ void Neuron::UpdateZFC()
     //cout<<"weight matrix dimension: "<<(*__w).Dimension()<<endl;
     //cout<<(*__w)<<endl;
     Matrix res = (*__w) * image;
+    //cout<<"res matrix: "<<endl;
+    //cout<<res<<endl;
     auto dim = res.Dimension();
     if(dim.first != 1 || dim.second != 1) 
     {

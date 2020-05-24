@@ -35,6 +35,10 @@ public:
     void PassWeightPointer(Matrix *);
     void PassBiasPointer(Matrix *);
 
+    // 
+    void ForwardPropagateForSample();
+    void BackwardPropagateForBatch();
+
     bool IsActive(); // for dropout
     void Disable();
     void Enable();
@@ -54,6 +58,7 @@ public:
     void SetCoordJ(size_t);
     void SetCoordK(size_t);
     void SetCoord(NeuronCoord);
+    void SetActuationFuncType(ActuationFuncType t);
 
     void UpdateA(); // update matrix a; a computation is independent of layer type, no need to design helper functions for different type layers
     void UpdateSigmaPrime(); // update derivative of a over z; sigma^prime

@@ -55,6 +55,12 @@ void ConstructLayer::Init()
 	InitNeurons();
 	InitFilters(); // input layer need to init filters, make all neurons active
     }
+    else if(__type == LayerType::output)
+    {
+	__p_data_interface = new DataInterface();
+	InitNeurons();
+	InitWeightsAndBias();
+    }
     else  // other layer
     {
 	InitNeurons();
@@ -93,7 +99,7 @@ void ConstructLayer::BatchInit()
 	DropOut();
 
     // only fc layer; cnn layer image won't change
-    if(__type == LayerType::fullyConnected) 
+    if(__type == LayerType::fullyConnected || __type == LayerType::output) 
     {
 	UpdateCoordsForActiveNeuronFC();
     }
@@ -116,12 +122,14 @@ void ConstructLayer::ProcessSample()
 
 void  ConstructLayer::SetNumberOfNeuronsFC(size_t n)
 {
-    if(__type != LayerType::fullyConnected) {
+    if(__type == LayerType::fullyConnected || __type == LayerType::output) {
+	__n_neurons_fc = n;
+    }
+    else {
 	std::cout<<"Error: needs to set layer type before setting number of neurons."
 	    <<std::endl;
 	exit(0);
     }
-    __n_neurons_fc = n;
 }
 
 void  ConstructLayer::SetNumberOfKernelsCNN(size_t n)
@@ -166,6 +174,8 @@ void ConstructLayer::InitNeurons()
 	InitNeuronsInputLayer();
     else if(__type == LayerType::fullyConnected)
 	InitNeuronsFC();
+    else if(__type == LayerType::output)
+        InitNeuronsFC();
     else
     {
 	std::cout<<"Error: Init neurons, unrecognized layer type."<<std::endl;
@@ -248,6 +258,7 @@ void ConstructLayer::InitNeuronsCNN()
 void ConstructLayer::InitNeuronsFC()
 {
     __neurons.clear();
+    assert(__n_neurons_fc >= 1);
     Pixel2D<Neuron*> image(__n_neurons_fc, 1);
     for(size_t i=0;i<__n_neurons_fc;i++)
     {
@@ -293,12 +304,20 @@ void ConstructLayer::InitFilters()
     // init filter 2d matrix, fill true value to all elements
     if(__type == LayerType::input)
     {
-	assert(__neurons.size() == 1);
+	assert(__neurons.size() == 1); // only one kernel
 	auto dim = __neurons[0].Dimension();
 	Filter2D f(dim.first, dim.second);
 	__activeFlag.push_back(f);
     }
-    if(__type == LayerType::fullyConnected)
+    else if(__type == LayerType::output)
+    {
+	assert(__neurons.size() == 1); // only one kernel
+	auto dim = __neurons[0].Dimension();
+	assert(dim.second == 1); // only one collum
+	Filter2D f(dim.first, dim.second);
+	__activeFlag.push_back(f);
+    }
+    else if(__type == LayerType::fullyConnected)
     {
 	assert(__neurons.size() == 1);
 	auto dim = __neurons[0].Dimension();
@@ -325,18 +344,19 @@ void  ConstructLayer::InitWeightsAndBias()
     __weightMatrix.clear();
     __biasVector.clear();
 
-    if(__type == LayerType::fullyConnected)
+    if(__type == LayerType::fullyConnected || __type == LayerType::output) // output layer is also a fully connected layer
     {
 	int n_prev = 0;
 	int n_curr = GetNumberOfNeurons();
 	if(__prevLayer == nullptr) // input layer
 	{
-	    std::cout<<"INFO: layer"<<GetID()
+	    std::cout<<"ERROR WARNING: layer"<<GetID()
 		<<" has no prev layer, default 10 neruons for prev layer was used."
 		<<std::endl;
 	    n_prev = 10;
 	}
-	else n_prev = __prevLayer->GetNumberOfNeurons();
+	else 
+	    n_prev = __prevLayer->GetNumberOfNeurons();
 
 	Matrix w(n_curr, n_prev);
 	w.RandomGaus(0., 1./sqrt((float)n_curr)); // (0, sqrt(n_neuron)) normal distribution
@@ -370,7 +390,7 @@ void  ConstructLayer::InitWeightsAndBias()
     }
 }
 
-void ConstructLayer::ForwardPropagate()
+void ConstructLayer::ForwardPropagateForSample()
 {
     // forward propagation: 
     //     ---) compute Z, A, A'(Z) for this layer
@@ -386,22 +406,21 @@ void ConstructLayer::ForwardPropagate()
 	    {
 		//cout<<"coord (i, j, k): ("<<i<<", "<<j<<", "<<k<<")"<<endl;
 		if(!__neurons[k][i][j]->IsActive()) continue;
-		__neurons[k][i][j] -> UpdateZ();
-		__neurons[k][i][j] -> UpdateA();
-		__neurons[k][i][j] -> UpdateSigmaPrime();
+		__neurons[k][i][j] -> ForwardPropagateForSample();
 	    }
 	}
     }
 
-    // when propagation for this layer is done, update the A, Z matrices
+    // when propagation for this layer is done, update the A, Z matrices (extract value from neurons and update them to layer)
     UpdateImagesA();
     UpdateImagesZ();
 }
 
-void ConstructLayer::BackwardPropagate()
+void ConstructLayer::BackwardPropagateForBatch()
 {
     // backward propagation:
     //     ---) compute delta for this layer
+    //     ---) only all samples in this batch finished, one can do this backward propagation
 
     for(size_t k=0;k<__neurons.size();k++)
     {
@@ -411,7 +430,7 @@ void ConstructLayer::BackwardPropagate()
 	    for(size_t j=0;j<dim.second;j++)
 	    {
 		if(__neurons[k][i][j]->IsActive()){
-		    __neurons[k][i][j] -> UpdateDelta();
+		    __neurons[k][i][j] -> BackwardPropagateForBatch();
 		}
 	    }
 	}
@@ -419,6 +438,134 @@ void ConstructLayer::BackwardPropagate()
 
     // when propagation for this layer is done, update the Delta matrices
     UpdateImagesDelta();
+}
+
+
+// cost functions ---------- cross entropy 
+static double cross_entropy(Matrix &A, Matrix &Y)
+{
+    auto dim = A.Dimension();
+    assert(dim == Y.Dimension());
+    assert(dim.second == 1);
+
+    double res = 0.;
+    for(size_t i=0;i<dim.first;i++)
+    {
+	res += Y[i][0] * log(A[i][0]) + (1. - Y[i][0]) * log(1. - A[i][0]);
+    }
+
+    return res; // no minus symbol here, 
+                // need to add a - sign when computing the cost for this batch
+}
+
+// cost functions ---------- log likelihood
+static double log_likelihood(Matrix &, Matrix &)
+{
+    // this one works for softmax layer
+    // details to be implemented
+
+    // Y should be one-hot vector
+    return 0;	
+}
+
+// cost functions ---------- quadratic sum
+static double quadratic_sum(Matrix &A, Matrix &Y)
+{
+    // this one is only for research test, not used in reality
+    auto dim = A.Dimension();
+    assert(dim == Y.Dimension());
+    assert(dim.second == 1);
+
+    double res = 0.;
+    for(size_t i=0;i<dim.first;i++)
+    {
+	res += (A[i][0] - Y[i][0]) *  (A[i][0] - Y[i][0]);
+    }
+
+    return res; // no minus symbol here, 
+                // need to add a - sign when computing the cost for this batch
+}
+
+void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
+{
+    // for output layer
+    // propagation(backward and forward) are integrated in this function
+
+    // --- 1) first do forward propagation, calculate z and a
+    ForwardPropagateForSample();
+
+    // --- 2) then compute the cost function C(a_i, y_i)
+    //      if you want a softmax layer, then the softmax should also be done here
+    size_t sample_number = __imageA.size();
+    cout<<sample_number<<endl;
+
+    Images sample_image = __imageA.back();
+    assert(sample_image.GetNumberOfKernels() == 1); // output layer must be a fully connected layer, so one kernel
+    // now get a_i
+    Matrix sample_A = sample_image.OutputImageFromKernel[0];
+    assert(sample_A.Dimension().second == 1); // must be a collum matrix
+    //cout<<sample_A<<endl;
+
+    assert(sample_number >= 1);
+    Matrix sample_label = (__p_data_interface->GetCurrentBatchLabel())[sample_number-1];
+    assert(sample_label.Dimension()  == sample_A.Dimension());
+    //cout<<sample_label<<endl;
+
+    double cost = 0.;
+    if(__cost_func_type == CostFuncType::cross_entropy)
+    {
+	cost = cross_entropy(sample_A, sample_label);
+    }
+    else if(__cost_func_type == CostFuncType::log_likelihood)
+    {
+	cost = log_likelihood(sample_A, sample_label);
+    }
+    else if(__cost_func_type == CostFuncType::quadratic_sum)
+    {
+	cost = quadratic_sum(sample_A, sample_label);
+    }
+    else {
+	cout<<"Error: cost function only supports cross_entropy, loglikelihood, quadratic_sum"
+	    <<endl;
+	exit(0);
+    }
+    // push cost for current sample to memory
+    __outputLayerCost.push_back(cost);
+
+
+
+    // --- 3) then calculate delta: delta = delta(a_i, y_i) for this sample
+    // -------------- please note: this function only calculate \delta for current sample, which cannot be used for backpropagation
+    // ------------------ the \delta used for backpropagation should be a sumed average of all \deltas in this batch
+    //
+    // ------------------ so: on batch level, you need to forward propagate n_batch_size times
+    // ----------------------- but only back propagate 1 time
+    //
+    // ----------------------- in other words, backpropagation only happens when all forwardpropagation finished !!! !!! ******
+    // ----------------------- this is because THE COST_FUNCTION is defined as a sum over all samples in one batch !!!!! ******
+
+    Matrix delta = Matrix(sample_A.Dimension());
+    if(__cost_func_type == CostFuncType::cross_entropy)
+    {
+	delta = sample_A - sample_label;
+    }
+    else if(__cost_func_type == CostFuncType::log_likelihood)
+    {
+	delta = sample_A - sample_label;
+    }
+    else if(__cost_func_type == CostFuncType::quadratic_sum)
+    {
+	delta = sample_A - sample_label;
+    }
+    else {
+	cout<<"Error: cost function only supports cross_entropy, loglikelihood, quadratic_sum"
+	    <<endl;
+	exit(0);
+    }
+    // push cost for current sample to memory
+    Images images_delta_from_current_sample;
+    images_delta_from_current_sample.OutputImageFromKernel.push_back(delta); // only one kernel
+    __imageDelta.push_back(images_delta_from_current_sample);
 }
 
 std::vector<Images>& ConstructLayer::GetImagesA()
@@ -485,11 +632,12 @@ void ConstructLayer::UpdateImagesA()
     //    so imageA will clear after each batch is done
     //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix inside a batch
     size_t l = __imageA.size();
+    //cout<<" >>> image in lyaer id: "<<GetID()<<" size: "<<l<<endl;
 
     // extract the A matrices from neurons for current traning sample
     Images sample_image_A;
 
-    if(__type == LayerType::fullyConnected) // for fully connected layer
+    if(__type == LayerType::fullyConnected || __type == LayerType::output) // for fully connected layer; output layer is also a fully connected layer
     {
 	for(size_t k=0;k<__neuronDim.k;k++) // kernel
 	{
@@ -743,7 +891,7 @@ void ConstructLayer::UpdateActiveWeightsAndBias()
 void ConstructLayer::AssignWeightsAndBiasToNeurons()
 {
     // pass active weights and bias pointers to neurons
-    if(__type == LayerType::fullyConnected)
+    if(__type == LayerType::fullyConnected || __type == LayerType::output) // output is also a fully connected layer
     {
 	// assert(__weightMatrixActive.size() == 1); // should be equal to number of active neurons
 	assert(__neurons.size() == 1);
@@ -964,7 +1112,7 @@ void ConstructLayer::TransferValueFromActiveToOriginal_WB()
 	if(__type == LayerType::cnn) {
 	    active_to_original_cnn(__weightMatrix[i], __activeFlag[i], __weightMatrixActive[i]);
 	}
-	else if(__type == LayerType::fullyConnected)
+	else if(__type == LayerType::fullyConnected || __type == LayerType::output)
 	{
 	    // for fc layer, nKernels = 1
 	    assert(nKernels == 1);
@@ -1059,7 +1207,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 	// for cnn, drop out won't change threshold
 	__biasVectorActive = __biasVector; 
     }
-    else if (__type == LayerType::fullyConnected)
+    else if (__type == LayerType::fullyConnected || __type == LayerType::output)
     {
 	map_matrix_fc(__weightMatrix[0], __activeFlag[0]);
     }
@@ -1069,7 +1217,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
     {
 	__activeNeuronDim = __neuronDim; // drop out not happening on neurons, so dimension stays same
     }
-    else if(__type == LayerType::fullyConnected)
+    else if(__type == LayerType::fullyConnected || __type == LayerType::output)
     {
 	__activeNeuronDim = __neuronDim; // update active neuron dimension
 	size_t active_neurons = __weightMatrixActive.size();
@@ -1100,6 +1248,11 @@ NeuronCoord ConstructLayer::GetActiveNeuronDimension()
 void ConstructLayer::SetDropOutFactor(float f)
 {
     __dropOut = f;
+}
+
+void ConstructLayer::SetCostFuncType(CostFuncType t)
+{
+    __cost_func_type = t;
 }
 
 std::vector<Matrix>* ConstructLayer::GetWeightMatrix()
@@ -1491,7 +1644,8 @@ std::pair<size_t, size_t> ConstructLayer::GetOutputImageSizeFC()
 
 int ConstructLayer::GetNumberOfNeurons()
 {
-    if(__type == LayerType::fullyConnected){
+    if(__type == LayerType::fullyConnected || __type == LayerType::output ) // output layer is also a fully connected layer
+    {
 	// used for setup fc layer
 	return __n_neurons_fc;
     }
@@ -1558,6 +1712,7 @@ void ConstructLayer::Print()
 	std::cout<<__biasVectorActive[i]<<std::endl;
     }
 
+    std::cout<<std::endl<<"==================================="<<std::endl;
     std::cout<<" --- neuron information: "<<std::endl;
     for(size_t ii=0;ii<__neurons.size();ii++)
     {
@@ -1574,4 +1729,3 @@ void ConstructLayer::Print()
 	}
     }
 }
-

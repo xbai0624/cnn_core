@@ -54,10 +54,12 @@ public:
     virtual void SetDropOutFactor(float);
     virtual void SetPrevLayer(Layer *);
     virtual void SetNextLayer(Layer *);
+    virtual void SetCostFuncType(CostFuncType t);
 
     //
-    virtual void ForwardPropagate();
-    virtual void BackwardPropagate();
+    virtual void ForwardPropagateForSample();
+    virtual void BackwardPropagateForBatch();
+    virtual void ComputeCostInOutputLayerForCurrentSample();
 
     // update weights and bias, for external call
     virtual void UpdateWeightsAndBias();
@@ -188,6 +190,7 @@ private:
     std::vector<Images> __imageA;
     std::vector<Images> __imageZ;
     std::vector<Images> __imageDelta;
+    std::vector<double> __outputLayerCost;
 
     // 6):
     // total neuron dimension
@@ -203,6 +206,7 @@ private:
     // for now, only use 1. Other values will be implemented with future improvements
     int __cnnStride = 1; 
     PoolingMethod __poolingMethod = PoolingMethod::Max;
+    CostFuncType __cost_func_type = CostFuncType::cross_entropy;
  
     // 8):
     Layer* __prevLayer = nullptr;
