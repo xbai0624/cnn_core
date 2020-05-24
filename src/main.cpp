@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     layer_input->Init(); // check (need this one)
     cout<<"input layer test finished..."<<endl;
 
-    Layer *l0, *l1, *l2, *layer_output;
+    Layer *l0 = nullptr, *l1 = nullptr, *l2 = nullptr, *layer_output = nullptr;
 
     // test network
 

@@ -3,7 +3,7 @@
 # ################################################
 #
 CC		:= g++
-Compile_Flags	:= -Wall -Wextra -g -std=c++11 -O2 -pthread
+Compile_Flags	:= -Wall -Wextra  -g -std=c++11 -O2 -pthread
 
 # these options for generating library
 Target		:= main

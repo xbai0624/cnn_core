@@ -17,6 +17,10 @@ void Network::Init()
         i->Init();
 }
 
+void Network::Train()
+{
+}
+
 void Network::UpdateBatch()
 {
     ForwardPropagateForBatch();
@@ -46,4 +50,10 @@ void Network::UpdateWeightsAndBias()
 {
     for(auto &i: __layers)
 	i->UpdateWeightsAndBias();
+}
+
+std::vector<Matrix> Network::Classify()
+{
+    std::vector<Matrix> res;
+    return res;
 }

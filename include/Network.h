@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "Layer.h"
+#include "Matrix.h"
 
 class Network 
 {
@@ -10,16 +11,16 @@ public:
     Network();
 
     template<typename T>
-        Network(T l)
-        {
-            __layers.push_back(dynamic_cast<Layer*>(l));
-        }
+	Network(T l)
+	{
+	    __layers.push_back(dynamic_cast<Layer*>(l));
+	}
 
     template<typename T, typename... Args>
-        Network(T l, Args... pars)
-        {
-            Network(pars...);
-        }
+	Network(T l, Args... pars)
+	{
+	    Network(pars...);
+	}
 
     ~Network();
 
@@ -27,6 +28,7 @@ public:
     void Init();
 
     // training procedures
+    void Train();
     void UpdateBatch();
     void ForwardPropagateForBatch();
     void BackwardPropagateForBatch();
@@ -36,6 +38,9 @@ public:
     // testing procedures
     float GetAccuracy();
     float GetError();
+
+    // work procedures
+    std::vector<Matrix> Classify();
 
 private:
     std::vector<Layer*> __layers;
