@@ -564,7 +564,7 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
     }
     // push cost for current sample to memory
     Images images_delta_from_current_sample;
-    images_delta_from_current_sample.OutputImageFromKernel.push_back(delta); // only one kernel
+    images_delta_from_current_sample.OutputImageFromKernel.push_back(delta); // only one kernel in fc layer
     __imageDelta.push_back(images_delta_from_current_sample);
 }
 
@@ -785,6 +785,9 @@ void ConstructLayer::UpdateImagesDelta()
     //    drop out only happens on batch level
     //    so imageZ will clear after each batch is done
     //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix on batch level
+    //
+    //    The above comment is copied from UpdateImagesZ(); just to refresh your memory, no use in this function
+    //
     size_t l = __imageDelta.size();
 
     // extract the A matrices from neurons for current traning sample
