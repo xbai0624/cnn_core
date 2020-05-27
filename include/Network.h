@@ -9,11 +9,10 @@ class Network
 {
 public:
     Network();
-
     template<typename T>
 	Network(T l)
 	{
-	    __layers.push_back(dynamic_cast<Layer*>(l));
+	    __middleLayers.push_back(dynamic_cast<Layer*>(l));
 	}
 
     template<typename T, typename... Args>
@@ -21,11 +20,11 @@ public:
 	{
 	    Network(pars...);
 	}
-
     ~Network();
 
     // inits
     void Init();
+    void ConstructLayers();
 
     // training procedures
     void Train();
@@ -43,7 +42,7 @@ public:
     std::vector<Matrix> Classify();
 
 private:
-    std::vector<Layer*> __layers;
+    std::vector<Layer*> __middleLayers;
 };
 
 #endif

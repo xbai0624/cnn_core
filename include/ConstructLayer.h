@@ -115,6 +115,7 @@ public:
     virtual void ClearImage();
     virtual NeuronCoord GetActiveNeuronDimension();
     virtual void Print();
+    virtual void PassDataInterface(DataInterface *data_interface);
 
     // getters
     virtual PoolingMethod & GetPoolingMethod();

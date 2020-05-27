@@ -155,6 +155,9 @@ struct Images
 // and the "orignal copy" will be also updated according to the "flag matrix".
 //
 //**************************************************************************************
+
+class DataInterface;
+
 class Layer 
 {
 public:
@@ -222,6 +225,7 @@ public:
     virtual void ClearImage()=0;
     virtual NeuronCoord GetActiveNeuronDimension()=0;
     virtual void Print() = 0;
+    virtual void PassDataInterface(DataInterface *data_interface) = 0;
 
     // setters
     virtual void SetPoolingMethod(PoolingMethod)=0;

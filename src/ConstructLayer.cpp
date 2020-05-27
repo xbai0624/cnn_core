@@ -50,7 +50,7 @@ void ConstructLayer::Init()
 {
     if(__type == LayerType::input) 
     {
-	__p_data_interface = new DataInterface();
+	//__p_data_interface = new DataInterface();
 	ImplementInputLayerA();
 	InitNeurons();
 	InitFilters(); // input layer need to init filters, make all neurons active
@@ -76,6 +76,11 @@ void ConstructLayer::Connect(Layer *prev, Layer *next)
 {
     __prevLayer = prev;
     __nextLayer = next;
+}
+
+void ConstructLayer::PassDataInterface(DataInterface *data_interface)
+{
+    __p_data_interface = data_interface;
 }
 
 void ConstructLayer::ProcessBatch()
@@ -281,6 +286,7 @@ void ConstructLayer::InitNeuronsInputLayer()
 
     Matrix tmp = __imageA[0].OutputImageFromKernel[0]; // first sample
     auto dim = tmp.Dimension();
+    assert(dim.second == 1); // make sure matrix transformation has been done
     //cout<<"Info::input layer dimension: "<<dim<<endl;
     Pixel2D<Neuron*> image(dim.first, dim.second);
     for(size_t i=0;i<dim.first;i++)
@@ -577,8 +583,7 @@ std::vector<Images>& ConstructLayer::GetImagesA()
 void ConstructLayer::ImplementInputLayerA()
 {
     // if this layer is input layer, then fill the 'a' matrix directly with input image data
-
-    auto input_data = __p_data_interface->GetNewBatch();
+    auto input_data = __p_data_interface->GetNewBatchData();
 
     // load all batch data to memory, this should be faster
     for(auto &i: input_data)
