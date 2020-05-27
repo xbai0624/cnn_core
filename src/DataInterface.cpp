@@ -70,6 +70,7 @@ std::vector<Matrix>& DataInterface::GetNewBatchData()
     //
 
     __data.clear();
+    __label.clear();
 
 
     //---------------------------------------------
@@ -151,4 +152,8 @@ void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 
 	contents.push_back(m);
     }
+
+    // *** implement the image dimension
+    Matrix tmp = contents[0].Reshape(100, 1);
+    __dataDimension = tmp.Dimension();
 }

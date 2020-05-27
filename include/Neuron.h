@@ -66,12 +66,15 @@ public:
     void UpdateDelta(); // update matrix delta
     void UpdateDeltaCNN();
     void UpdateDeltaFC();
+    void UpdateDeltaOutputLayer();
     void UpdateDeltaPooling();
 
     void UpdateZ(); // update matrix z
     void UpdateZCNN();
     void UpdateZFC();
     void UpdateZPooling();
+
+    void ClearPreviousBatch();
 
     // getters 
     std::vector<double> & GetAVector();

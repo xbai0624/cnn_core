@@ -55,6 +55,7 @@ public:
     virtual void SetPrevLayer(Layer *);
     virtual void SetNextLayer(Layer *);
     virtual void SetCostFuncType(CostFuncType t);
+    virtual void SetBatchSize(int);
 
     //
     virtual void ForwardPropagateForSample();
@@ -89,7 +90,7 @@ public:
     virtual std::vector<Images>& GetImagesDelta();
     void UpdateImagesDelta();
     // Fill A matrix for input layer
-    void ImplementInputLayerA();
+    void FillDataToInputLayerA();
 
     // get active neuron flags
     //virtual std::vector<std::vector<std::vector<NeuronCoord>>>& GetActiveNeuronFlags();
@@ -116,6 +117,7 @@ public:
     virtual NeuronCoord GetActiveNeuronDimension();
     virtual void Print();
     virtual void PassDataInterface(DataInterface *data_interface);
+    virtual void ClearUsedSampleForInputLayer();
 
     // getters
     virtual PoolingMethod & GetPoolingMethod();
@@ -130,6 +132,7 @@ public:
     virtual std::pair<size_t, size_t> GetOutputImageSizeFC(); // used for setup layer
     virtual int GetNumberOfNeurons();
     virtual int GetNumberOfNeuronsFC();
+    virtual int GetBatchSize();
 
 private:
     // 1):
@@ -216,6 +219,7 @@ private:
     // 9):
     // an interface for processing input image
     DataInterface *__p_data_interface = nullptr;
+    int gBatchSize = 0;
 };
 
 #endif

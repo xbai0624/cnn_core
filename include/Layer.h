@@ -226,6 +226,8 @@ public:
     virtual NeuronCoord GetActiveNeuronDimension()=0;
     virtual void Print() = 0;
     virtual void PassDataInterface(DataInterface *data_interface) = 0;
+    virtual void FillDataToInputLayerA() = 0;
+    virtual void ClearUsedSampleForInputLayer() = 0;
 
     // setters
     virtual void SetPoolingMethod(PoolingMethod)=0;
@@ -234,6 +236,7 @@ public:
     virtual void SetPrevLayer(Layer *) = 0;
     virtual void SetNextLayer(Layer *) = 0;
     virtual void SetCostFuncType(CostFuncType t) = 0;
+    virtual void SetBatchSize(int) = 0;
 
     // getters
     virtual PoolingMethod & GetPoolingMethod()=0;
@@ -247,6 +250,7 @@ public:
     virtual int GetNumberOfNeurons() = 0;
     virtual int GetNumberOfNeuronsFC() = 0;
     virtual int GetID(){return __layerID;};
+    virtual int GetBatchSize() = 0;
 
 private:
     // reserved section

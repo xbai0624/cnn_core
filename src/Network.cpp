@@ -52,23 +52,18 @@ void Network::ConstructLayers()
     l0->SetPrevLayer(layer_input);
     l0->SetNextLayer(layer_output);
     l0->Init();
-    l0->EpochInit();
-    l0->EnableDropOut();
-    l0->BatchInit();
-    //l0->Print();
-    l0->ForwardPropagateForSample();
-    auto images = l0->GetImagesA();
-    cout<<" number of images: "<<images.size()<<endl;
+    //l0->EpochInit();
+    //l0->EnableDropOut();
+    //l0->BatchInit();
 
     // 5) output layer
     // test output layer
-    layer_output = new ConstructLayer(LayerType::output, 10); // output layer must be a fully connected layer
+    layer_output = new ConstructLayer(LayerType::output, 2); // output layer must be a fully connected layer
     layer_output -> SetPrevLayer(l0);
+    layer_output -> PassDataInterface(data_interface); // output layer also need data interface for accessing labels
     layer_output -> Init();
-    layer_output -> EpochInit(); // output layer no dropout
-    layer_output -> BatchInit();
-    //layer_output->Print();
-    layer_output -> ComputeCostInOutputLayerForCurrentSample(); // output layer needs to compute cost function
+    //layer_output -> EpochInit(); // output layer no dropout
+    //layer_output -> BatchInit();
 
     // 6) save all constructed layers
     __inputLayer = layer_input;
@@ -79,6 +74,7 @@ void Network::ConstructLayers()
 
 void Network::Train()
 {
+    __numberOfEpoch = 1; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
     for(int i=0;i<__numberOfEpoch;i++)
     {
         UpdateEpoch();
@@ -88,25 +84,44 @@ void Network::Train()
 void Network::UpdateEpoch()
 {
     int numberofBatches = __dataInterface -> GetNumberOfBatches();
+    cout<<"......Info: "<<numberofBatches<<" batches in this epoch"<<endl;
+    numberofBatches = 5; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQqq
+
+    // initializations for epoch
+    for(auto &i: __middleLayers)
+    {
+	i->EpochInit();
+	i->EnableDropOut();
+    }
+    __outputLayer->EpochInit();  // output layer no dropout
 
     for(int i=0;i<numberofBatches;i++)
     {
+        cout<<"......... training for batch: "<<i<<"/"<<numberofBatches<<endl;
         UpdateBatch();
     }
 }
 
 void Network::UpdateBatch()
 {
+    // initializations for batch
+    for(auto &i: __middleLayers)
+        i->BatchInit();
+    __outputLayer->BatchInit(); // input layer do not need init
+
     ForwardPropagateForBatch();
     BackwardPropagateForBatch();
-    UpdateWeightsAndBias();
+    //UpdateWeightsAndBias();
 }
 
 void Network::ForwardPropagateForBatch()
 {
-    // prepare new batch data in Datainterface class
+    // prepare new batch data and label in Datainterface class
     __dataInterface->GetNewBatchData();
     __dataInterface->GetNewBatchLabel();
+
+    // fill data to input layer
+    __inputLayer->FillDataToInputLayerA();
 
     // get batch size
     int sample_size = __dataInterface->GetBatchSize();
@@ -116,18 +131,29 @@ void Network::ForwardPropagateForBatch()
     {
 	for(auto &i: __middleLayers)
 	    i->ForwardPropagateForSample();
-    }
 
-    // compute cost in output layer for each sample
-    __outputLayer-> ComputeCostInOutputLayerForCurrentSample();
+	// compute cost in output layer for each sample
+	__outputLayer-> ComputeCostInOutputLayerForCurrentSample();
+
+	// after finished training, clear used samples in input layer
+	// this is necessary
+	__inputLayer->ClearUsedSampleForInputLayer();
+    }
 }
 
 void Network::BackwardPropagateForBatch() 
 {
     // backward
     int NLayers = __middleLayers.size();
+
+    // first do output layer
+    __outputLayer -> BackwardPropagateForBatch();
+
+    // then do middle layers
     for(int i=NLayers-1; i>=0;i--)
 	__middleLayers[i]->BackwardPropagateForBatch();
+
+    /// no need for input layer
 }
 
 void Network::UpdateWeightsAndBias()

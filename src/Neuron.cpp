@@ -325,7 +325,11 @@ void Neuron::UpdateSigmaPrime()
 void Neuron::UpdateDelta()
 {
     // update delta for current layer
-    if(__layer->GetType() == LayerType::fullyConnected)
+    if(__layer->GetType() == LayerType::output)
+    {
+	UpdateDeltaOutputLayer();
+    } 
+    else if(__layer->GetType() == LayerType::fullyConnected)
     {
 	UpdateDeltaFC();
     } 
@@ -344,12 +348,60 @@ void Neuron::UpdateDelta()
     }
 }
 
+
+void Neuron::UpdateDeltaOutputLayer()
+{
+     // back propagation delta for output layer
+    if(__delta.size() != __sigmaPrime.size() - 1) 
+    {
+	std::cout<<"Error: Neuron::UpdateDeltaOutputLayer() computing delta needs sigma^prime computed first."<<std::endl;
+	std::cout<<"        "<<__delta.size()<<" deltas, "<<__sigmaPrime.size()<<" sigma^primes"<<endl;
+	exit(0);
+    }
+ 
+    auto __deltaNext = __nextLayer->GetImagesDelta();
+    Images image_delta_Next = __deltaNext.back(); // get current sample delta
+    std::vector<Matrix> &deltaNext = image_delta_Next.OutputImageFromKernel;
+    if( deltaNext.size() != 1 ) 
+    {
+	std::cout<<"Error: Delta matrix dimension not match in FC layer"<<std::endl;
+	exit(0);
+    }
+    Matrix delta = deltaNext[0];
+
+    auto wv = __nextLayer->GetWeightMatrix();
+    if( wv->size() != 1 ) 
+    {
+	std::cout<<"Error: weight matrix dimension not match in FC layer"<<std::endl;
+	exit(0);
+    }
+    Matrix w = (*wv)[0];
+    // back propogate delta
+    w = w.Transpose();
+    auto dim = w.Dimension();
+    w = w.GetSection(__coord.i, __coord.i+1, 0, dim.second);
+
+    Matrix deltaCurrentLayer = w*delta;
+    if(deltaCurrentLayer.Dimension().first != 1 || deltaCurrentLayer.Dimension().second != 1) 
+    {
+	std::cout<<"Error: back propagation delta, matrix dimension not match in FC layer."<<std::endl;
+	exit(0);
+    }
+
+    double s_prime = __sigmaPrime.back();
+    double v = deltaCurrentLayer[0][0];
+    v = v*s_prime;
+    __delta.push_back(v);
+}
+
+
 void Neuron::UpdateDeltaFC()
 {
     // back propagation delta for fully connected layer
     if(__delta.size() != __sigmaPrime.size() - 1) 
     {
-	std::cout<<"Error: computing delta needs sigma^prime computed first."<<std::endl;
+	std::cout<<"Error: Neuron::UpdateDeltaFC() computing delta needs sigma^prime computed first."<<std::endl;
+	std::cout<<"        "<<__delta.size()<<" deltas, "<<__sigmaPrime.size()<<" sigma^primes"<<endl;
 	exit(0);
     }
 
@@ -537,6 +589,14 @@ NeuronCoord Neuron::GetCoord()
 {
     // get neuron coord
     return __coord;
+}
+
+void Neuron::ClearPreviousBatch()
+{
+    __a.clear();
+    __delta.clear();
+    __z.clear();
+    __sigmaPrime.clear();
 }
 
 void Neuron::Print()

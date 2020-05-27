@@ -50,14 +50,11 @@ void ConstructLayer::Init()
 {
     if(__type == LayerType::input) 
     {
-	//__p_data_interface = new DataInterface();
-	ImplementInputLayerA();
 	InitNeurons();
 	InitFilters(); // input layer need to init filters, make all neurons active
     }
     else if(__type == LayerType::output)
     {
-	__p_data_interface = new DataInterface();
 	InitNeurons();
 	InitWeightsAndBias();
     }
@@ -115,10 +112,23 @@ void ConstructLayer::BatchInit()
     // assign active weights and bias to neurons
     AssignWeightsAndBiasToNeurons();
 
-    // clear training information from last batch
+    // clear training information from last batch for this layer
     __imageA.clear();
     __imageZ.clear();
     __imageDelta.clear();
+
+    // clear training information from last batch for neurons inside this layer
+    for(auto &pixel_2d: __neurons)
+    {
+        auto dim = pixel_2d.Dimension();
+	for(size_t i=0;i<dim.first;i++)
+	{
+	    for(size_t j=0;j<dim.second;j++)
+	    {
+	        pixel_2d[i][j]->ClearPreviousBatch();
+	    }
+	}
+    }
 }
 
 void ConstructLayer::ProcessSample()
@@ -277,15 +287,15 @@ void ConstructLayer::InitNeuronsFC()
 void ConstructLayer::InitNeuronsInputLayer()
 {
     __neurons.clear();
-    if(__imageA.size() <= 0)
+
+    if(__p_data_interface == nullptr)
     {
-        std::cout<<"Error: must initialize 'A' matrix before initializing neurons for input layer"
+        std::cout<<"Error: must implement/pass DataInterface class before initializing neurons for input layer"
 	         <<std::endl;
         exit(0);
     }
 
-    Matrix tmp = __imageA[0].OutputImageFromKernel[0]; // first sample
-    auto dim = tmp.Dimension();
+    auto dim = __p_data_interface->GetDataDimension();
     assert(dim.second == 1); // make sure matrix transformation has been done
     //cout<<"Info::input layer dimension: "<<dim<<endl;
     Pixel2D<Neuron*> image(dim.first, dim.second);
@@ -494,6 +504,12 @@ static double quadratic_sum(Matrix &A, Matrix &Y)
 
 void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
 {
+    if(__type != LayerType::output)
+    {
+        cout<<"Error: ComputeCostInOutputLayerForCurrentSample() only works for output layer."
+	    <<endl;
+        exit(0);
+    }
     // for output layer
     // propagation(backward and forward) are integrated in this function
 
@@ -503,7 +519,6 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
     // --- 2) then compute the cost function C(a_i, y_i)
     //      if you want a softmax layer, then the softmax should also be done here
     size_t sample_number = __imageA.size();
-    cout<<sample_number<<endl;
 
     Images sample_image = __imageA.back();
     assert(sample_image.GetNumberOfKernels() == 1); // output layer must be a fully connected layer, so one kernel
@@ -515,7 +530,6 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
     assert(sample_number >= 1);
     Matrix sample_label = (__p_data_interface->GetCurrentBatchLabel())[sample_number-1];
     assert(sample_label.Dimension()  == sample_A.Dimension());
-    //cout<<sample_label<<endl;
 
     double cost = 0.;
     if(__cost_func_type == CostFuncType::cross_entropy)
@@ -537,7 +551,6 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
     }
     // push cost for current sample to memory
     __outputLayerCost.push_back(cost);
-
 
 
     // --- 3) then calculate delta: delta = delta(a_i, y_i) for this sample
@@ -580,10 +593,13 @@ std::vector<Images>& ConstructLayer::GetImagesA()
 }
 
 
-void ConstructLayer::ImplementInputLayerA()
+void ConstructLayer::FillDataToInputLayerA()
 {
     // if this layer is input layer, then fill the 'a' matrix directly with input image data
-    auto input_data = __p_data_interface->GetNewBatchData();
+    auto input_data = __p_data_interface->GetCurrentBatchData();
+
+    // first clear the previous batch
+    __imageA.clear();
 
     // load all batch data to memory, this should be faster
     for(auto &i: input_data)
@@ -596,6 +612,24 @@ void ConstructLayer::ImplementInputLayerA()
 	// push this image to images of this batch
 	__imageA.push_back(image_a);
     }
+
+    cout<<">>>: "<<__imageA.size()<<" samples in current batch."<<endl;
+}
+
+void ConstructLayer::ClearUsedSampleForInputLayer()
+{
+    if(__type != LayerType::input)
+    {
+        cout<<"Error: Clear used sample for input layer only works for input layer..."<<endl;
+	exit(0);
+    }
+    if(__imageA.size() <= 0)
+    {
+        cout<<"Error: ClearUsedSampleForInputLayer(): __imageA already empty."<<endl;
+	exit(0);
+    }
+
+    __imageA.pop_back();
 }
 
 static Matrix filterMatrix(Matrix &A, Filter2D &F)
@@ -653,6 +687,7 @@ void ConstructLayer::UpdateImagesA()
 		    auto a_vector = __neurons[k][i][j]->GetAVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
+		        //cout<<a_vector.size()<<"......"<<l<<endl;
 			assert(a_vector.size() - 1 == l);
 			A[i][j] = a_vector.back();
 		    }
@@ -1263,6 +1298,11 @@ void ConstructLayer::SetCostFuncType(CostFuncType t)
     __cost_func_type = t;
 }
 
+void ConstructLayer::SetBatchSize(int s)
+{
+    gBatchSize = s;
+}
+
 std::vector<Matrix>* ConstructLayer::GetWeightMatrix()
 {
     return &__weightMatrixActive;
@@ -1286,6 +1326,11 @@ float ConstructLayer::GetDropOutFactor()
 std::vector<Filter2D>& ConstructLayer::GetActiveFlag()
 {
     return __activeFlag;
+}
+
+int ConstructLayer::GetBatchSize()
+{
+    return gBatchSize;
 }
 
 void ConstructLayer::UpdateWeightsAndBias()

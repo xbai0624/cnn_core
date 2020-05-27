@@ -17,8 +17,10 @@ public:
 
     std::vector<Matrix>& GetNewBatchData();
     std::vector<Matrix>& GetNewBatchLabel();
-    std::vector<Matrix>& GetCurrentBatch(){return __data;};
+    std::vector<Matrix>& GetCurrentBatchData(){return __data;};
     std::vector<Matrix>& GetCurrentBatchLabel(){return __label;};
+
+    std::pair<size_t, size_t> GetDataDimension(){return __dataDimension;};
 
     void test();
 
@@ -34,6 +36,8 @@ private:
 
     std::vector<Matrix> test_training_signal; // just for code development, loading all training data into this memory
     std::vector<Matrix> test_training_cosmic; // just for code development
+
+    std::pair<size_t, size_t> __dataDimension;
 };
 
 #endif
