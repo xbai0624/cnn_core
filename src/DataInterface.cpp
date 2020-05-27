@@ -29,6 +29,17 @@ DataInterface::~DataInterface()
     // place holder
 }
 
+int DataInterface::GetNumberOfBatches()
+{
+    // this line is to maliciously cause troulbe, what a fuck!
+    assert(test_training_signal.size() == test_training_cosmic.size());
+    int total_entries = test_training_signal.size();
+
+    int res = total_entries/gBatchSize;
+    if(total_entries%gBatchSize == 0) return res;
+    else return res+1;
+}
+
 void DataInterface::test()
 {
     // only one image

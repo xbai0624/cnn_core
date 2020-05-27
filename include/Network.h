@@ -5,6 +5,8 @@
 #include "Layer.h"
 #include "Matrix.h"
 
+class DataInterface;
+
 class Network 
 {
 public:
@@ -28,6 +30,7 @@ public:
 
     // training procedures
     void Train();
+    void UpdateEpoch();
     void UpdateBatch();
     void ForwardPropagateForBatch();
     void BackwardPropagateForBatch();
@@ -42,7 +45,11 @@ public:
     std::vector<Matrix> Classify();
 
 private:
-    std::vector<Layer*> __middleLayers;
+    std::vector<Layer*> __middleLayers;                  // save all middle layers
+    Layer *__inputLayer=nullptr, *__outputLayer=nullptr; // input and output layers
+    DataInterface *__dataInterface = nullptr;            // save data interface class
+
+    int __numberOfEpoch = 100; // nuber of epochs
 };
 
 #endif

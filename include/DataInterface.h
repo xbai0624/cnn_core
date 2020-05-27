@@ -13,6 +13,7 @@ public:
 
     int GetBatchSize(){return __data.size();};
     void SetBatchSize(int s){gBatchSize = s;};
+    int GetNumberOfBatches();
 
     std::vector<Matrix>& GetNewBatchData();
     std::vector<Matrix>& GetNewBatchLabel();

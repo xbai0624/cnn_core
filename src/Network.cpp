@@ -20,7 +20,11 @@ Network::~Network()
 
 void Network::Init()
 {
+    // construct all layers
     ConstructLayers();
+
+    // set number of epochs
+    __numberOfEpoch = 10;
 }
 
 void Network::ConstructLayers()
@@ -65,10 +69,30 @@ void Network::ConstructLayers()
     layer_output -> BatchInit();
     //layer_output->Print();
     layer_output -> ComputeCostInOutputLayerForCurrentSample(); // output layer needs to compute cost function
+
+    // 6) save all constructed layers
+    __inputLayer = layer_input;
+    __outputLayer = layer_output;
+    __middleLayers.push_back(l0);
+    __dataInterface = data_interface;
 }
 
 void Network::Train()
 {
+    for(int i=0;i<__numberOfEpoch;i++)
+    {
+        UpdateEpoch();
+    }
+}
+
+void Network::UpdateEpoch()
+{
+    int numberofBatches = __dataInterface -> GetNumberOfBatches();
+
+    for(int i=0;i<numberofBatches;i++)
+    {
+        UpdateBatch();
+    }
 }
 
 void Network::UpdateBatch()
@@ -80,12 +104,22 @@ void Network::UpdateBatch()
 
 void Network::ForwardPropagateForBatch()
 {
-    int sample_size = 0;
+    // prepare new batch data in Datainterface class
+    __dataInterface->GetNewBatchData();
+    __dataInterface->GetNewBatchLabel();
+
+    // get batch size
+    int sample_size = __dataInterface->GetBatchSize();
+
+    // train each sample for the middle layers
     for(int i=0;i<sample_size;i++)
     {
 	for(auto &i: __middleLayers)
 	    i->ForwardPropagateForSample();
     }
+
+    // compute cost in output layer for each sample
+    __outputLayer-> ComputeCostInOutputLayerForCurrentSample();
 }
 
 void Network::BackwardPropagateForBatch() 
@@ -98,8 +132,12 @@ void Network::BackwardPropagateForBatch()
 
 void Network::UpdateWeightsAndBias()
 {
+    // update w&b for  middle layers
     for(auto &i: __middleLayers)
 	i->UpdateWeightsAndBias();
+
+    // update w&b for output layer
+    __outputLayer -> UpdateWeightsAndBias();
 }
 
 std::vector<Matrix> Network::Classify()
