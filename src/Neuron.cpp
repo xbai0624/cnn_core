@@ -1,10 +1,12 @@
 #include <cstdlib>
 #include <cmath>
 #include <iostream>
+#include <cassert>
 
 #include "Layer.h"
 #include "Neuron.h"
 #include "Matrix.h"
+#include "DataInterface.h"
 
 using namespace std;
 
@@ -35,11 +37,11 @@ void Neuron::PassBiasPointer(Matrix *_b)
     __b = _b;
 }
 
-void Neuron::ForwardPropagateForSample()
+void Neuron::ForwardPropagateForSample(int sample_index)
 {
-    UpdateZ();
-    UpdateA();
-    UpdateSigmaPrime();
+    UpdateZ(sample_index);
+    UpdateA(sample_index);
+    UpdateSigmaPrime(sample_index);
 }
 
 void Neuron::BackwardPropagateForBatch()
@@ -83,12 +85,20 @@ bool Neuron::IsActive()
 
 void Neuron::Reset()
 {
+    if(__layer == nullptr)
+    {
+        std::cout<<"Error: Neuron::Reset(): the layer info has not been set for this neuron."
+	         <<endl;
+        exit(0);
+    }
+    int batch_size = __layer->GetBatchSize();
     // after updateing weights and biase, 
     // namely after one training (one sample or one batch depends on user)
     // reset neurons for next computation
-    __a.clear(); // reset a
-    __delta.clear(); // reset delta
-    __z.clear(); // reset z
+    __a.resize(batch_size); // reset a
+    __delta.resize(batch_size); // reset delta
+    __z.resize(batch_size); // reset z
+    __sigmaPrime.resize(batch_size);
 
     //__wGradient.clear(); // reset weight gradient
     //__bGradient.clear(); // reset bias gradient
@@ -118,23 +128,23 @@ void Neuron::SetActuationFuncType(ActuationFuncType t)
     __funcType = t;
 }
 
-void Neuron::UpdateZ()
+void Neuron::UpdateZ(int sample_index)
 {
     // update z for current layer
     if(__layer->GetType() == LayerType::fullyConnected || __layer->GetType() == LayerType::output)
     {
 	//std::cout<<"fully connected layer update z"<<std::endl;
-	UpdateZFC();
+	UpdateZFC(sample_index);
     } 
     else if(__layer->GetType() == LayerType::cnn)
     {
 	//std::cout<<"cnn layer update z"<<std::endl;
-	UpdateZCNN();
+	UpdateZCNN(sample_index);
     } 
     else if(__layer->GetType() == LayerType::pooling)
     {
 	//std::cout<<"pooling layer update z"<<std::endl;
-	UpdateZPooling();
+	UpdateZPooling(sample_index);
     } 
     else 
     {
@@ -143,7 +153,7 @@ void Neuron::UpdateZ()
     }
 }
 
-void Neuron::UpdateZFC()
+void Neuron::UpdateZFC(int sample_index)
 {
     // for fully connected layer, matrix reform are done by Layer class
     // currently layer and its previous layer are fully connected
@@ -152,19 +162,20 @@ void Neuron::UpdateZFC()
     //cout<<"batch size: "<<_t.size()<<endl;
     //cout<<"kernel number: "<<_t[0].GetNumberOfKernels()<<endl;
     //cout<<" image dimension: "<<_t[0].OutputImageFromKernel[0].Dimension()<<endl;
-    if(_t.size() < 1) 
+    if(_t.size() < 1 || _t.size() < (size_t)sample_index) 
     {
 	std::cout<<"Error: previous layer has not 'A' image."<<std::endl;
 	exit(0);
     }
-    Images &images = _t.back(); // get images for current sample
+    //Images &images = _t.back(); // get images for current sample
+    Images &images = _t[sample_index]; // get images for current sample
     if(images.OutputImageFromKernel.size() != 1) 
     {
 	std::cout<<"Eroor: layer type not match, expecting FC layer, FC layer should only have 1 kernel."<<std::endl;
 	exit(0);
     }
 
-    Matrix &image = images.OutputImageFromKernel[0];
+    Matrix &image = images.OutputImageFromKernel[0]; // FC layer has only one "kernel" (equivalent kernel)
     //cout<<"neuron id: "<<__neuron_id<<", image A debug:"<<endl;
     //cout<<image<<endl;
 
@@ -181,10 +192,12 @@ void Neuron::UpdateZFC()
     }
     double z = res[0][0];
     z = z + (*__b)[0][0];
-    __z.push_back(z);
+
+    //__z.push_back(z);
+    __z[sample_index] = z;
 }
 
-void Neuron::UpdateZCNN()
+void Neuron::UpdateZCNN(int sample_index)
 {
     // cnn layer
     // every single output image needs input from all input images
@@ -197,7 +210,8 @@ void Neuron::UpdateZCNN()
     size_t i_end = i_start + w_dim.first;
     size_t j_end = j_start + w_dim.second;
 
-    auto &current_sample_image = (inputImage.back()).OutputImageFromKernel;
+    //auto &current_sample_image = (inputImage.back()).OutputImageFromKernel;
+    auto &current_sample_image = (inputImage[sample_index]).OutputImageFromKernel;
     auto image_dim = current_sample_image[0].Dimension();
     if(i_end > image_dim.first || j_end > image_dim.second)
     {
@@ -216,23 +230,27 @@ void Neuron::UpdateZCNN()
 	}
     }
     double z = res + (*__b)[0][0];
-    __z.push_back(z);
+    //__z.push_back(z);
+    __z[sample_index] = z;
 }
 
-void Neuron::UpdateZPooling()
+void Neuron::UpdateZPooling(int sample_index)
 {
     // pooling layer
     // should be with cnn layer, just kernel matrix all elements=1, bias = 0;
     auto inputImage = __previousLayer->GetImagesA();
-    if(inputImage.back().OutputImageFromKernel.size() < __coord.k)
+    //if(inputImage.back().OutputImageFromKernel.size() < __coord.k)
+    if(inputImage[sample_index].OutputImageFromKernel.size() < __coord.k)
     {
 	// output image for current sample
+	// pooling layer is different with cnn layer
+	// in pooling layer, kernel and 'A' images has a 1-to-1 mapping relationship
 	// for pooling layer, number of kernels (previous layer)  = number of kernels (current layer)
 	std::cout<<"Error: pooling operation matrix dimension not match"<<std::endl;
 	exit(0);
     }
-    //Matrix image = inputImage[__coord.k];
-    Images image = inputImage.back(); // images for current training sample
+    //Images image = inputImage.back(); // images for current training sample
+    Images image = inputImage[sample_index]; // images for current training sample
     std::vector<Matrix> & images = image.OutputImageFromKernel;
     Matrix &kernel_image = images[__coord.k];
 
@@ -261,19 +279,16 @@ void Neuron::UpdateZPooling()
 	exit(0);
     }
 
-    __z.push_back(z);
+    //__z.push_back(z);
+    __z[sample_index] = z;
 }
 
-void Neuron::UpdateA()
+void Neuron::UpdateA(int sample_index)
 {
     // update a for current training sample
-    if(__a.size() != __z.size()-1) 
-    {
-	std::cout<<"Error: computing a needs z computed first."<<std::endl;
-	exit(0);
-    }
-    double v = __z.back();
-    double a;
+    //double v = __z.back();
+    double v = __z[sample_index];
+    double a = -100.; // theorectially, a>=-1
     if(__funcType == ActuationFuncType::Sigmoid)
 	a = __sigmoid(v);
     else if(__funcType == ActuationFuncType::Tanh)
@@ -282,26 +297,36 @@ void Neuron::UpdateA()
 	a = __relu(v);
     else
 	std::cout<<"Error: unsupported actuation function type."<<std::endl;
-    __a.push_back(a);
+
+    if(a < -1) 
+    {
+        std::cout<<"Error: Neuron::UpdateA(int sample_index), a<-1? something wrong."
+	         <<endl;
+	exit(0);
+    }
+    //__a.push_back(a);
+    __a[sample_index] = a;
 }
 
-void Neuron::UpdateSigmaPrime()
+void Neuron::UpdateSigmaPrime(int sample_index)
 {
     // update sigma^prime
-    if(__sigmaPrime.size() != __z.size()-1) 
-    {
-	std::cout<<"Error: computing sigma^prime needs z computed first."<<std::endl;
-	exit(0);
-    }
-    if(__sigmaPrime.size() != __a.size()-1) 
-    {
-	std::cout<<"Error: computing sigma^prime needs a computed first."<<std::endl;
-	exit(0);
-    }
+    //if(__sigmaPrime.size() != __z.size()-1) 
+    //{
+	//std::cout<<"Error: computing sigma^prime needs z computed first."<<std::endl;
+	//exit(0);
+    //}
+    //if(__sigmaPrime.size() != __a.size()-1) 
+    //{
+	//std::cout<<"Error: computing sigma^prime needs a computed first."<<std::endl;
+	//exit(0);
+    //}
 
-    double a = __a.back();
-    double z = __z.back();
-    double sigma_prime;
+    //double a = __a.back();
+    //double z = __z.back();
+    double a = __a[sample_index];
+    double z = __z[sample_index];
+    double sigma_prime = -100; // theoretically, it must between [0, 1]
 
     if(__funcType == ActuationFuncType::Sigmoid) 
     {
@@ -318,8 +343,16 @@ void Neuron::UpdateSigmaPrime()
     }
     else
 	std::cout<<"Error: unsupported actuation function type in direvative."<<std::endl;
+ 
+    if(sigma_prime < 0)
+    {
+        std::cout<<"Error: Neuron::UpdateSigmaPrime: sigma_prime<0? something wrong."
+	         <<endl;
+	exit(0);
+    }
 
-    __sigmaPrime.push_back(sigma_prime);
+    //__sigmaPrime.push_back(sigma_prime);
+    __sigmaPrime[sample_index] = sigma_prime;
 }
 
 void Neuron::UpdateDelta()
@@ -352,46 +385,51 @@ void Neuron::UpdateDelta()
 void Neuron::UpdateDeltaOutputLayer()
 {
      // back propagation delta for output layer
-    if(__delta.size() != __sigmaPrime.size() - 1) 
+    if(__sigmaPrime.size() <= 0) 
     {
 	std::cout<<"Error: Neuron::UpdateDeltaOutputLayer() computing delta needs sigma^prime computed first."<<std::endl;
 	std::cout<<"        "<<__delta.size()<<" deltas, "<<__sigmaPrime.size()<<" sigma^primes"<<endl;
 	exit(0);
     }
- 
-    auto __deltaNext = __nextLayer->GetImagesDelta();
-    Images image_delta_Next = __deltaNext.back(); // get current sample delta
-    std::vector<Matrix> &deltaNext = image_delta_Next.OutputImageFromKernel;
-    if( deltaNext.size() != 1 ) 
-    {
-	std::cout<<"Error: Delta matrix dimension not match in FC layer"<<std::endl;
-	exit(0);
-    }
-    Matrix delta = deltaNext[0];
+    assert(__a.size() == __sigmaPrime.size()); // make sure all have been updated
+    auto labels = __layer->GetDataInterface()->GetCurrentBatchLabel();
+    assert(labels.size() == __a.size()); // make sure all samples have been processed
 
-    auto wv = __nextLayer->GetWeightMatrix();
-    if( wv->size() != 1 ) 
-    {
-	std::cout<<"Error: weight matrix dimension not match in FC layer"<<std::endl;
-	exit(0);
-    }
-    Matrix w = (*wv)[0];
-    // back propogate delta
-    w = w.Transpose();
-    auto dim = w.Dimension();
-    w = w.GetSection(__coord.i, __coord.i+1, 0, dim.second);
+    size_t batch_size = __a.size();
 
-    Matrix deltaCurrentLayer = w*delta;
-    if(deltaCurrentLayer.Dimension().first != 1 || deltaCurrentLayer.Dimension().second != 1) 
+    // check
+    auto dim = labels[0].Dimension(); // dim.first is neuron row number, dim.second is neuron collum number
+    assert(__coord.i < dim.first);
+    assert(dim.second == 1);
+    assert(__coord.j == 1);
+
+    float delta = 0;
+    for(size_t sample_id=0;sample_id<batch_size;sample_id++)
     {
-	std::cout<<"Error: back propagation delta, matrix dimension not match in FC layer."<<std::endl;
-	exit(0);
+        // get neuron coord
+        int i = __coord.i;
+
+        // expected y for this neuron
+        Matrix label_for_current_sample = labels[sample_id];
+	float expected_y = label_for_current_sample[i][0];
+
+	// a_i for this neuron
+	float a_i = __a[sample_id];
+
+	// sigma^\prime_i for this neuron
+	float sigma_prime_i = __sigmaPrime[sample_id];
+
+        // get delta for this sample for this neuron
+	double delta_for_this_sample = (a_i - expected_y) * sigma_prime_i;
+
+        // sum
+	delta += delta_for_this_sample;
     }
 
-    double s_prime = __sigmaPrime.back();
-    double v = deltaCurrentLayer[0][0];
-    v = v*s_prime;
-    __delta.push_back(v);
+    delta /= static_cast<float>(batch_size);
+
+    // save delta for this batch this neuron
+    __sigmaPrime.push_back(delta);
 }
 
 
@@ -422,6 +460,7 @@ void Neuron::UpdateDeltaFC()
 	exit(0);
     }
     Matrix w = (*wv)[0];
+
     // back propogate delta
     w = w.Transpose();
     auto dim = w.Dimension();
@@ -593,10 +632,22 @@ NeuronCoord Neuron::GetCoord()
 
 void Neuron::ClearPreviousBatch()
 {
-    __a.clear();
-    __delta.clear();
-    __z.clear();
-    __sigmaPrime.clear();
+    //__a.clear();           // obsolete
+    //__delta.clear();       // obsolete
+    //__z.clear();           // obsolete
+    //__sigmaPrime.clear();  // obsolete
+
+    if(__layer == nullptr)
+    {
+        std::cout<<"Error: Neuron::ClearPreviousBatch(): the layer info has not been set for this neuron."
+	         <<endl;
+        exit(0);
+    }
+    int batch_size = __layer->GetBatchSize();
+    __a.resize(batch_size); // reset a
+    __delta.resize(batch_size); // reset delta
+    __z.resize(batch_size); // reset z
+    __sigmaPrime.resize(batch_size);
 }
 
 void Neuron::Print()

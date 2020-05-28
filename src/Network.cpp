@@ -51,6 +51,7 @@ void Network::ConstructLayers()
     l0 = new ConstructLayer(LayerType::fullyConnected, 20);
     l0->SetPrevLayer(layer_input);
     l0->SetNextLayer(layer_output);
+    l0->PassDataInterface(data_interface); // now all layers need data_interface pointer
     l0->Init();
     //l0->EpochInit();
     //l0->EnableDropOut();
@@ -74,9 +75,10 @@ void Network::ConstructLayers()
 
 void Network::Train()
 {
-    __numberOfEpoch = 1; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+    __numberOfEpoch = 2; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
     for(int i=0;i<__numberOfEpoch;i++)
     {
+        std::cout<<"[------]Number of epoch: "<<i<<"/"<<__numberOfEpoch<<endl;
         UpdateEpoch();
     }
 }
@@ -110,7 +112,7 @@ void Network::UpdateBatch()
     __outputLayer->BatchInit(); // input layer do not need init
 
     ForwardPropagateForBatch();
-    BackwardPropagateForBatch();
+    //BackwardPropagateForBatch();
     //UpdateWeightsAndBias();
 }
 
@@ -127,17 +129,22 @@ void Network::ForwardPropagateForBatch()
     int sample_size = __dataInterface->GetBatchSize();
 
     // train each sample for the middle layers
-    for(int i=0;i<sample_size;i++)
+    for(int sample_index=0;sample_index<sample_size;sample_index++)
     {
 	for(auto &i: __middleLayers)
-	    i->ForwardPropagateForSample();
+	    i->ForwardPropagateForSample(sample_index);
 
 	// compute cost in output layer for each sample
-	__outputLayer-> ComputeCostInOutputLayerForCurrentSample();
+	__outputLayer-> ComputeCostInOutputLayerForCurrentSample(sample_index);
 
 	// after finished training, clear used samples in input layer
-	// this is necessary
-	__inputLayer->ClearUsedSampleForInputLayer();
+	// 1)
+	// this is necessary; because program aways fetch the last sample in "__imageA" from InputLayer
+	//                ---- so one need to pop_back() the used sample
+	// 2)
+	// not needed anymore; because changed from "dynamic increase" to "fixed length"
+	//                ---- now for eaching training, program fetch an indexed sample, not the last sample     
+	//__inputLayer->ClearUsedSampleForInputLayer();
     }
 }
 

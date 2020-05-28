@@ -55,12 +55,11 @@ public:
     virtual void SetPrevLayer(Layer *);
     virtual void SetNextLayer(Layer *);
     virtual void SetCostFuncType(CostFuncType t);
-    virtual void SetBatchSize(int);
 
     //
-    virtual void ForwardPropagateForSample();
+    virtual void ForwardPropagateForSample(int sample_index);
     virtual void BackwardPropagateForBatch();
-    virtual void ComputeCostInOutputLayerForCurrentSample();
+    virtual void ComputeCostInOutputLayerForCurrentSample(int sample_index);
 
     // update weights and bias, for external call
     virtual void UpdateWeightsAndBias();
@@ -82,11 +81,14 @@ public:
 
     // extract a value from neurons and re-organize these values in matrix form, only for current training sample
     virtual std::vector<Images>& GetImagesA();
-    void UpdateImagesA();
+    void UpdateImagesA(int sample_index);
     // extract z value from neurons and re-organize these values in matrix form, only for current training sample
     virtual std::vector<Images>& GetImagesZ();
-    void UpdateImagesZ();
-    // extract delta value from neurons and re-organize these values in matrix form, only for current training sample
+    void UpdateImagesZ(int sample_index);
+    // extract delta value from neurons and re-organize these values in matrix form, only for current batch
+    // !!::NOTE::!!  during backpropagation, delta need to be calculated over all batch samples,
+    // !!::NOTE::!!  b/c Cost function is a sum of all batch samples
+    // !!::NOTE::!!  this is not the same with A & Z images, they are calculated for each sample
     virtual std::vector<Images>& GetImagesDelta();
     void UpdateImagesDelta();
     // Fill A matrix for input layer
@@ -117,7 +119,7 @@ public:
     virtual NeuronCoord GetActiveNeuronDimension();
     virtual void Print();
     virtual void PassDataInterface(DataInterface *data_interface);
-    virtual void ClearUsedSampleForInputLayer();
+    virtual void ClearUsedSampleForInputLayer_obsolete();
 
     // getters
     virtual PoolingMethod & GetPoolingMethod();
@@ -133,6 +135,8 @@ public:
     virtual int GetNumberOfNeurons();
     virtual int GetNumberOfNeuronsFC();
     virtual int GetBatchSize();
+    virtual CostFuncType GetCostFuncType();
+    virtual DataInterface * GetDataInterface();
 
 private:
     // 1):
@@ -194,6 +198,7 @@ private:
     std::vector<Images> __imageA;
     std::vector<Images> __imageZ;
     std::vector<Images> __imageDelta;
+    //std::vector<Images> __imageSigmaPrime;
     std::vector<double> __outputLayerCost;
 
     // 6):
@@ -219,7 +224,6 @@ private:
     // 9):
     // an interface for processing input image
     DataInterface *__p_data_interface = nullptr;
-    int gBatchSize = 0;
 };
 
 #endif

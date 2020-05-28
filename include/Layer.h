@@ -39,9 +39,9 @@ enum class Regularization
 
 enum class CostFuncType
 {
-    cross_entropy,
-    log_likelihood,
-    quadratic_sum
+    cross_entropy,  // sigmoid
+    log_likelihood, // for softmax
+    quadratic_sum   // not practical, for test only
 };
 
 
@@ -170,10 +170,10 @@ public:
     virtual void Connect(Layer *prev=nullptr, Layer *next=nullptr) = 0;
 
     // propagation
-    virtual void ForwardPropagateForSample() = 0;
+    virtual void ForwardPropagateForSample(int) = 0;
     virtual void BackwardPropagateForBatch() = 0;
     virtual void UpdateWeightsAndBias() = 0;
-    virtual void ComputeCostInOutputLayerForCurrentSample() = 0;
+    virtual void ComputeCostInOutputLayerForCurrentSample(int) = 0;
 
     // setup hyper parameters
     virtual void SetLearningRate(double) = 0;
@@ -227,7 +227,7 @@ public:
     virtual void Print() = 0;
     virtual void PassDataInterface(DataInterface *data_interface) = 0;
     virtual void FillDataToInputLayerA() = 0;
-    virtual void ClearUsedSampleForInputLayer() = 0;
+    virtual void ClearUsedSampleForInputLayer_obsolete() = 0;
 
     // setters
     virtual void SetPoolingMethod(PoolingMethod)=0;
@@ -236,7 +236,6 @@ public:
     virtual void SetPrevLayer(Layer *) = 0;
     virtual void SetNextLayer(Layer *) = 0;
     virtual void SetCostFuncType(CostFuncType t) = 0;
-    virtual void SetBatchSize(int) = 0;
 
     // getters
     virtual PoolingMethod & GetPoolingMethod()=0;
@@ -251,6 +250,8 @@ public:
     virtual int GetNumberOfNeuronsFC() = 0;
     virtual int GetID(){return __layerID;};
     virtual int GetBatchSize() = 0;
+    virtual CostFuncType GetCostFuncType() = 0;
+    virtual DataInterface * GetDataInterface() = 0;
 
 private:
     // reserved section

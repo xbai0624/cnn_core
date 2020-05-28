@@ -75,13 +75,14 @@ std::vector<Matrix>& DataInterface::GetNewBatchData()
 
     //---------------------------------------------
     // prepare data
-    int offset = gDataIndex * gBatchSize;
-    for(int i=0;i<gBatchSize;i++) // signal data
+    int batch_size = gBatchSize / 2; // because signal + cosmic = gBatchSize
+    int offset = gDataIndex * batch_size;
+    for(int i=0;i<batch_size;i++) // signal data
     {
         Matrix M = test_training_signal[offset+i].Reshape(100, 1);
         __data.push_back(M);
     }
-    for(int i=0;i<gBatchSize;i++) // cosmic data
+    for(int i=0;i<batch_size;i++) // cosmic data
     {
         Matrix M = test_training_cosmic[offset+i].Reshape(100, 1);
         __data.push_back(M);
@@ -95,11 +96,11 @@ std::vector<Matrix>& DataInterface::GetNewBatchData()
     signal_label_m[0][0] = 1;
     Matrix cosmic_label_m(2, 1, 0); // cosmic label
     cosmic_label_m[1][0] = 1;
-    for(int i=0;i<gBatchSize;i++)
+    for(int i=0;i<batch_size;i++)
     {
         __label.push_back(signal_label_m);
     }
-    for(int i=0;i<gBatchSize;i++)
+    for(int i=0;i<batch_size;i++)
     {
         __label.push_back(cosmic_label_m);
     }

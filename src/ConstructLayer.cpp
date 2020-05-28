@@ -53,7 +53,7 @@ void ConstructLayer::Init()
 	InitNeurons();
 	InitFilters(); // input layer need to init filters, make all neurons active
     }
-    else if(__type == LayerType::output)
+    else if(__type == LayerType::output) // output layer, reserved
     {
 	InitNeurons();
 	InitWeightsAndBias();
@@ -113,9 +113,12 @@ void ConstructLayer::BatchInit()
     AssignWeightsAndBiasToNeurons();
 
     // clear training information from last batch for this layer
-    __imageA.clear();
-    __imageZ.clear();
-    __imageDelta.clear();
+    int batch_size = __p_data_interface->GetBatchSize();
+    __imageA.resize(batch_size);
+    __imageZ.resize(batch_size);
+    __imageDelta.resize(batch_size);
+    //__imageSigmaPrime.resize(batch_size);
+    __outputLayerCost.resize(batch_size);
 
     // clear training information from last batch for neurons inside this layer
     for(auto &pixel_2d: __neurons)
@@ -198,6 +201,7 @@ void ConstructLayer::InitNeurons()
     }
     std::cout<<"Debug: Layer:"<<GetID()<<" init neruons done."<<std::endl;
 
+    // after initializing all neurons, setup neuron dimension information
     // setup total neuron dimension
     size_t k = __neurons.size();
     size_t i = 0;
@@ -406,7 +410,7 @@ void  ConstructLayer::InitWeightsAndBias()
     }
 }
 
-void ConstructLayer::ForwardPropagateForSample()
+void ConstructLayer::ForwardPropagateForSample(int sample_index)
 {
     // forward propagation: 
     //     ---) compute Z, A, A'(Z) for this layer
@@ -422,14 +426,14 @@ void ConstructLayer::ForwardPropagateForSample()
 	    {
 		//cout<<"coord (i, j, k): ("<<i<<", "<<j<<", "<<k<<")"<<endl;
 		if(!__neurons[k][i][j]->IsActive()) continue;
-		__neurons[k][i][j] -> ForwardPropagateForSample();
+		__neurons[k][i][j] -> ForwardPropagateForSample(sample_index);
 	    }
 	}
     }
 
     // when propagation for this layer is done, update the A, Z matrices (extract value from neurons and update them to layer)
-    UpdateImagesA();
-    UpdateImagesZ();
+    UpdateImagesA(sample_index);
+    UpdateImagesZ(sample_index);
 }
 
 void ConstructLayer::BackwardPropagateForBatch()
@@ -502,7 +506,7 @@ static double quadratic_sum(Matrix &A, Matrix &Y)
                 // need to add a - sign when computing the cost for this batch
 }
 
-void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
+void ConstructLayer::ComputeCostInOutputLayerForCurrentSample(int sample_index)
 {
     if(__type != LayerType::output)
     {
@@ -514,21 +518,23 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
     // propagation(backward and forward) are integrated in this function
 
     // --- 1) first do forward propagation, calculate z and a
-    ForwardPropagateForSample();
+    ForwardPropagateForSample(sample_index);
 
     // --- 2) then compute the cost function C(a_i, y_i)
     //      if you want a softmax layer, then the softmax should also be done here
-    size_t sample_number = __imageA.size();
+    //size_t sample_number = __imageA.size(); // obsolete
 
-    Images sample_image = __imageA.back();
+    //Images sample_image = __imageA.back();
+    Images sample_image = __imageA[sample_index];
     assert(sample_image.GetNumberOfKernels() == 1); // output layer must be a fully connected layer, so one kernel
     // now get a_i
     Matrix sample_A = sample_image.OutputImageFromKernel[0];
     assert(sample_A.Dimension().second == 1); // must be a collum matrix
     //cout<<sample_A<<endl;
 
-    assert(sample_number >= 1);
-    Matrix sample_label = (__p_data_interface->GetCurrentBatchLabel())[sample_number-1];
+    //assert(sample_number >= 1); // obsolete
+    //Matrix sample_label = (__p_data_interface->GetCurrentBatchLabel())[sample_number-1];
+    Matrix sample_label = (__p_data_interface->GetCurrentBatchLabel())[sample_index];
     assert(sample_label.Dimension()  == sample_A.Dimension());
 
     double cost = 0.;
@@ -550,12 +556,13 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
 	exit(0);
     }
     // push cost for current sample to memory
-    __outputLayerCost.push_back(cost);
+    //__outputLayerCost.push_back(cost);
+    __outputLayerCost[sample_index]= cost;
 
 
     // --- 3) then calculate delta: delta = delta(a_i, y_i) for this sample
     // -------------- please note: this function only calculate \delta for current sample, which cannot be used for backpropagation
-    // ------------------ the \delta used for backpropagation should be a sumed average of all \deltas in this batch
+    // ------------------ the \delta used for backpropagation should be a sum of all \deltas in this batch
     //
     // ------------------ so: on batch level, you need to forward propagate n_batch_size times
     // ----------------------- but only back propagate 1 time
@@ -584,7 +591,7 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample()
     // push cost for current sample to memory
     Images images_delta_from_current_sample;
     images_delta_from_current_sample.OutputImageFromKernel.push_back(delta); // only one kernel in fc layer
-    __imageDelta.push_back(images_delta_from_current_sample);
+    __imageDelta[sample_index]=images_delta_from_current_sample;
 }
 
 std::vector<Images>& ConstructLayer::GetImagesA()
@@ -616,8 +623,9 @@ void ConstructLayer::FillDataToInputLayerA()
     cout<<">>>: "<<__imageA.size()<<" samples in current batch."<<endl;
 }
 
-void ConstructLayer::ClearUsedSampleForInputLayer()
+void ConstructLayer::ClearUsedSampleForInputLayer_obsolete()
 {
+    // not needed anymore
     if(__type != LayerType::input)
     {
         cout<<"Error: Clear used sample for input layer only works for input layer..."<<endl;
@@ -664,20 +672,21 @@ static Matrix filterMatrix(Matrix &A, Filter2D &F)
     return Ret;
 }
 
-void ConstructLayer::UpdateImagesA()
+void ConstructLayer::UpdateImagesA(int sample_id)
 {
     // __imageA shold only store images from all active neurons, the matching info can be achieved from filter matrix
     //    drop out only happens on batch level
     //    so imageA will clear after each batch is done
     //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix inside a batch
-    size_t l = __imageA.size();
+    //size_t l = __imageA.size();
     //cout<<" >>> image in lyaer id: "<<GetID()<<" size: "<<l<<endl;
 
     // extract the A matrices from neurons for current traning sample
     Images sample_image_A;
 
-    if(__type == LayerType::fullyConnected || __type == LayerType::output) // for fully connected layer; output layer is also a fully connected layer
+    if(__type == LayerType::fullyConnected || __type == LayerType::output) 
     {
+	// for fully connected layer; output layer is also a fully connected layer
 	for(size_t k=0;k<__neuronDim.k;k++) // kernel
 	{
 	    Matrix A( __neuronDim.i, __neuronDim.j);
@@ -687,9 +696,10 @@ void ConstructLayer::UpdateImagesA()
 		    auto a_vector = __neurons[k][i][j]->GetAVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
-		        //cout<<a_vector.size()<<"......"<<l<<endl;
-			assert(a_vector.size() - 1 == l);
-			A[i][j] = a_vector.back();
+			//cout<<a_vector.size()<<"......"<<l<<endl;
+			//assert(a_vector.size() - 1 == l); // obsolete
+			//A[i][j] = a_vector.back();        // obsolete
+			A[i][j] = a_vector[sample_id];
 		    }
 		    else
 		    {
@@ -704,7 +714,8 @@ void ConstructLayer::UpdateImagesA()
 	    assert(R.Dimension().first  == __activeNeuronDim.i);
 	    assert(R.Dimension().second == __activeNeuronDim.j);
 	}
-	__imageA.push_back(sample_image_A);
+	//__imageA.push_back(sample_image_A); // obsolete
+	__imageA[sample_id] = sample_image_A;
     }
     else if(__type == LayerType::cnn) // for cnn layer
     {
@@ -719,8 +730,9 @@ void ConstructLayer::UpdateImagesA()
 		    auto a_vector = __neurons[k][i][j]->GetAVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
-			assert(a_vector.size() - 1 == l);
-			A[i][j] = a_vector.back();
+			//assert(a_vector.size() - 1 == l); // obsolete
+			//A[i][j] = a_vector.back();        // obsolete
+			A[i][j] = a_vector[sample_id];
 		    }
 		    else
 		    {
@@ -730,7 +742,8 @@ void ConstructLayer::UpdateImagesA()
 	    }
 	    sample_image_A.OutputImageFromKernel.push_back(A); // no need to filter
 	}
-	__imageA.push_back(sample_image_A);
+	//__imageA.push_back(sample_image_A);
+	__imageA[sample_id] = sample_image_A;
     }
     else // for other layer types
     {
@@ -742,13 +755,13 @@ std::vector<Images>& ConstructLayer::GetImagesZ()
     return __imageZ;
 }
 
-void ConstructLayer::UpdateImagesZ()
+void ConstructLayer::UpdateImagesZ(int sample_id)
 {
     // __imageZ shold only store images from all active neurons, the matching info can be achieved from filter matrix
     //    drop out only happens on batch level
     //    so imageZ will clear after each batch is done
     //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix on batch level
-    size_t l = __imageZ.size();
+    //size_t l = __imageZ.size();
 
     // extract the A matrices from neurons for current traning sample
     Images sample_image_Z;
@@ -764,8 +777,9 @@ void ConstructLayer::UpdateImagesZ()
 		    auto z_vector = __neurons[k][i][j]->GetZVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
-			assert(z_vector.size() - 1 == l);
-			Z[i][j] = z_vector.back();
+			//assert(z_vector.size() - 1 == l); // obsolete
+			//Z[i][j] = z_vector.back();        // obsolete
+			Z[i][j] = z_vector[sample_id];
 		    }
 		    else
 		    {
@@ -780,7 +794,8 @@ void ConstructLayer::UpdateImagesZ()
 	    assert(R.Dimension().first  == __activeNeuronDim.i);
 	    assert(R.Dimension().second == __activeNeuronDim.j);
 	}
-	__imageZ.push_back(sample_image_Z);
+	//__imageZ.push_back(sample_image_Z);
+	__imageZ[sample_id] = sample_image_Z;
     }
     else if(__type == LayerType::cnn) // for cnn layer
     {
@@ -795,8 +810,9 @@ void ConstructLayer::UpdateImagesZ()
 		    auto z_vector = __neurons[k][i][j]->GetZVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
-			assert(z_vector.size() - 1 == l);
-			Z[i][j] = z_vector.back();
+			//assert(z_vector.size() - 1 == l); // obsolete
+			//Z[i][j] = z_vector.back();        // obsolete
+			Z[i][j] = z_vector[sample_id];
 		    }
 		    else
 		    {
@@ -806,7 +822,8 @@ void ConstructLayer::UpdateImagesZ()
 	    }
 	    sample_image_Z.OutputImageFromKernel.push_back(Z); // no need to filter
 	}
-	__imageZ.push_back(sample_image_Z);
+	//__imageZ.push_back(sample_image_Z);
+	__imageZ[sample_id] = sample_image_Z;
     }
     else // for other layer types
     {
@@ -1273,7 +1290,6 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 void ConstructLayer::UpdateImageForCurrentTrainingSample()
 {
     // loop for all neurons
-
 }
 
 void ConstructLayer::ClearImage()
@@ -1296,11 +1312,6 @@ void ConstructLayer::SetDropOutFactor(float f)
 void ConstructLayer::SetCostFuncType(CostFuncType t)
 {
     __cost_func_type = t;
-}
-
-void ConstructLayer::SetBatchSize(int s)
-{
-    gBatchSize = s;
 }
 
 std::vector<Matrix>* ConstructLayer::GetWeightMatrix()
@@ -1330,7 +1341,43 @@ std::vector<Filter2D>& ConstructLayer::GetActiveFlag()
 
 int ConstructLayer::GetBatchSize()
 {
-    return gBatchSize;
+    if( __p_data_interface == nullptr)
+    {
+        std::cout<<"Error: ConstructLayer::GetBatchSize() data interface is nullptr."
+	         <<endl;
+        exit(0);
+    }
+
+    int batch_size = __p_data_interface -> GetBatchSize();
+    if(batch_size <= 0)
+    {
+        std::cout<<"Error: ConstructLayer::GetBatchSize() batch size is 0, seems data interface is not implemented."
+	         <<endl;
+        exit(0);
+    }
+    return batch_size;
+}
+
+CostFuncType ConstructLayer::GetCostFuncType()
+{
+    if(__type != LayerType::output)
+    {
+        cout<<"Error: ConstructLayer::GetCostFuncType() only works for output layer"
+	    <<endl;
+	exit(0);
+    }
+    return __cost_func_type;
+}
+
+DataInterface * ConstructLayer::GetDataInterface()
+{
+    if(__p_data_interface == nullptr)
+    {
+        cout<<"Error: ConstructLayer::GetDataInterface() data interface is nullptr."
+	    <<endl;
+	exit(0);
+    }
+    return __p_data_interface;
 }
 
 void ConstructLayer::UpdateWeightsAndBias()

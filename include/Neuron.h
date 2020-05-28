@@ -36,14 +36,14 @@ public:
     void PassBiasPointer(Matrix *);
 
     // 
-    void ForwardPropagateForSample();
+    void ForwardPropagateForSample(int sample_index);
     void BackwardPropagateForBatch();
 
     bool IsActive(); // for dropout
     void Disable();
     void Enable();
 
-    void Reset(); // reset for next training
+    void Reset(); // reset for next training (batch level)
 
     double __sigmoid(double); // actuation function
     double __tanh(double);
@@ -60,8 +60,11 @@ public:
     void SetCoord(NeuronCoord);
     void SetActuationFuncType(ActuationFuncType t);
 
-    void UpdateA(); // update matrix a; a computation is independent of layer type, no need to design helper functions for different type layers
-    void UpdateSigmaPrime(); // update derivative of a over z; sigma^prime
+    // update matrix a; 'a' computation is independent of layer type, 
+    // no need to design helper functions for different type layers
+    void UpdateA(int sample_id); 
+    // update derivative of a over z; sigma^prime
+    void UpdateSigmaPrime(int sample_id); 
 
     void UpdateDelta(); // update matrix delta
     void UpdateDeltaCNN();
@@ -69,10 +72,10 @@ public:
     void UpdateDeltaOutputLayer();
     void UpdateDeltaPooling();
 
-    void UpdateZ(); // update matrix z
-    void UpdateZCNN();
-    void UpdateZFC();
-    void UpdateZPooling();
+    void UpdateZ(int sample_id); // update matrix z
+    void UpdateZCNN(int sample_id);
+    void UpdateZFC(int sample_id);
+    void UpdateZPooling(int sample_id);
 
     void ClearPreviousBatch();
 
@@ -98,9 +101,9 @@ private:
     std::vector<double> __sigmaPrime; // derivative of Z
 
     // the layer that this neurons belongs to
-    Layer *__layer;
-    Layer *__previousLayer;
-    Layer *__nextLayer;
+    Layer *__layer = nullptr;
+    Layer *__previousLayer = nullptr;
+    Layer *__nextLayer = nullptr;
 
     // for dropout algorithm, dropout algorithm will disable
     // some neurons in a layer

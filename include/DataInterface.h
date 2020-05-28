@@ -11,7 +11,7 @@ public:
     DataInterface(const char* path1, const char* path2); // for code development
     ~DataInterface();
 
-    int GetBatchSize(){return __data.size();};
+    int GetBatchSize(){return gBatchSize;};
     void SetBatchSize(int s){gBatchSize = s;};
     int GetNumberOfBatches();
 
