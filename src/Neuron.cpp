@@ -487,17 +487,17 @@ void Neuron::UpdateDeltaFC(int sample_index)
 void Neuron::UpdateDeltaCNN(int sample_index)
 {
     // back propagate delta for cnn layer
-    if(__delta.size() != __sigmaPrime.size()-1)
+    if(__sigmaPrime.size()<=0)
     {
 	std::cout<<"Error: computing delta needs sigma^prime computed first."<<std::endl;
 	exit(0);
     }
-    double _sigma_prime = __sigmaPrime.back();
+    double _sigma_prime = __sigmaPrime[sample_index];
 
     auto deltaVecNext = __nextLayer->GetImagesDelta();
     auto weightVecNext = __nextLayer->GetWeightMatrix();
 
-    Images &image_next_layer = deltaVecNext.back(); // delta for current training sample
+    Images &image_next_layer = deltaVecNext[sample_index]; // delta for current training sample
     std::vector<Matrix> & vec_delta_image = image_next_layer.OutputImageFromKernel;
 
     size_t C_next = vec_delta_image.size();
@@ -532,7 +532,8 @@ void Neuron::UpdateDeltaCNN(int sample_index)
     }
 
     tmp = tmp * _sigma_prime;
-    __delta.push_back(tmp);
+
+    __delta[sample_index] = tmp;
 }
 
 void Neuron::UpdateDeltaPooling(int sample_index)
