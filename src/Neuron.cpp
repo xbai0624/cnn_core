@@ -381,7 +381,6 @@ void Neuron::UpdateDelta(int sample_index)
     }
 }
 
-
 void Neuron::UpdateDeltaOutputLayer(int sample_index)
 {
      // back propagation delta for output layer
@@ -395,7 +394,7 @@ void Neuron::UpdateDeltaOutputLayer(int sample_index)
     auto labels = __layer->GetDataInterface()->GetCurrentBatchLabel();
     assert(labels.size() == __a.size()); // make sure all samples have been processed
 
-    size_t batch_size = __a.size();
+    //size_t batch_size = __a.size();
 
     // check
     auto dim = labels[0].Dimension(); // dim.first is neuron row number, dim.second is neuron collum number
@@ -403,33 +402,36 @@ void Neuron::UpdateDeltaOutputLayer(int sample_index)
     assert(dim.second == 1);
     assert(__coord.j == 1);
 
-    float delta = 0;
-    for(size_t sample_id=0;sample_id<batch_size;sample_id++)
+    auto cost_func_type = __layer->GetCostFuncType(); // for $\partial C over \partial a$
+
+    // label for current sample
+    Matrix label_for_current_sample = labels[sample_index]; 
+    // expected value for current sample current neuron
+    float y_i = label_for_current_sample[__coord.i][0];
+
+    // a value for current sample
+    float a_i = __a[sample_index];
+
+    // sigma^\prime for current sample
+    float sigma_prime_i = __sigmaPrime[sample_index];
+
+    // solve for dC/da, which is dependent on the type of cost function
+    float dc_over_da = 0;
+    if(cost_func_type == CostFuncType::cross_entropy)
     {
-        // get neuron coord
-        int i = __coord.i;
-
-        // expected y for this neuron
-        Matrix label_for_current_sample = labels[sample_id];
-	float expected_y = label_for_current_sample[i][0];
-
-	// a_i for this neuron
-	float a_i = __a[sample_id];
-
-	// sigma^\prime_i for this neuron
-	float sigma_prime_i = __sigmaPrime[sample_id];
-
-        // get delta for this sample for this neuron
-	double delta_for_this_sample = (a_i - expected_y) * sigma_prime_i;
-
-        // sum
-	delta += delta_for_this_sample;
+        dc_over_da = a_i  - y_i;
+    }
+    else 
+    {
+        // to be implemented
+        dc_over_da = a_i - y_i; 
     }
 
-    delta /= static_cast<float>(batch_size);
+    // delta for current sample current neuron
+    float delta = dc_over_da * sigma_prime_i; 
 
     // save delta for this batch this neuron
-    __sigmaPrime.push_back(delta);
+    __sigmaPrime[sample_index] = delta;
 }
 
 
