@@ -150,15 +150,21 @@ void Network::ForwardPropagateForBatch()
 
 void Network::BackwardPropagateForBatch() 
 {
+    // get batch size
+    int sample_size = __dataInterface->GetBatchSize(); 
+     
     // backward
     int NLayers = __middleLayers.size();
 
-    // first do output layer
-    __outputLayer -> BackwardPropagateForBatch();
+    for(int i=0;i<sample_size;i++)
+    {
+	// first do output layer
+	__outputLayer -> BackwardPropagateForSample(i);
 
-    // then do middle layers
-    for(int i=NLayers-1; i>=0;i--)
-	__middleLayers[i]->BackwardPropagateForBatch();
+	// then do middle layers
+	for(int i=NLayers-1; i>=0;i--)
+	    __middleLayers[i]->BackwardPropagateForSample(i);
+    }
 
     /// no need for input layer
 }

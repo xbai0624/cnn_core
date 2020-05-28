@@ -171,7 +171,7 @@ public:
 
     // propagation
     virtual void ForwardPropagateForSample(int) = 0;
-    virtual void BackwardPropagateForBatch() = 0;
+    virtual void BackwardPropagateForSample(int) = 0;
     virtual void UpdateWeightsAndBias() = 0;
     virtual void ComputeCostInOutputLayerForCurrentSample(int) = 0;
 

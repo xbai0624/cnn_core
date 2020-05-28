@@ -37,7 +37,7 @@ public:
 
     // 
     void ForwardPropagateForSample(int sample_index);
-    void BackwardPropagateForBatch();
+    void BackwardPropagateForSample(int sample_index);
 
     bool IsActive(); // for dropout
     void Disable();
@@ -66,11 +66,11 @@ public:
     // update derivative of a over z; sigma^prime
     void UpdateSigmaPrime(int sample_id); 
 
-    void UpdateDelta(); // update matrix delta
-    void UpdateDeltaCNN();
-    void UpdateDeltaFC();
-    void UpdateDeltaOutputLayer();
-    void UpdateDeltaPooling();
+    void UpdateDelta(int sample_index); // update matrix delta
+    void UpdateDeltaCNN(int sample_index);
+    void UpdateDeltaFC(int sample_index);
+    void UpdateDeltaOutputLayer(int sample_index);
+    void UpdateDeltaPooling(int sample_index);
 
     void UpdateZ(int sample_id); // update matrix z
     void UpdateZCNN(int sample_id);

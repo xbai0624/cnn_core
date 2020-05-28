@@ -44,9 +44,9 @@ void Neuron::ForwardPropagateForSample(int sample_index)
     UpdateSigmaPrime(sample_index);
 }
 
-void Neuron::BackwardPropagateForBatch()
+void Neuron::BackwardPropagateForSample(int sample_index)
 {
-    UpdateDelta();
+    UpdateDelta(sample_index);
 }
 
 
@@ -355,24 +355,24 @@ void Neuron::UpdateSigmaPrime(int sample_index)
     __sigmaPrime[sample_index] = sigma_prime;
 }
 
-void Neuron::UpdateDelta()
+void Neuron::UpdateDelta(int sample_index)
 {
     // update delta for current layer
     if(__layer->GetType() == LayerType::output)
     {
-	UpdateDeltaOutputLayer();
+	UpdateDeltaOutputLayer(sample_index);
     } 
     else if(__layer->GetType() == LayerType::fullyConnected)
     {
-	UpdateDeltaFC();
+	UpdateDeltaFC(sample_index);
     } 
     else if(__layer->GetType() == LayerType::cnn)
     {
-	UpdateDeltaCNN();
+	UpdateDeltaCNN(sample_index);
     } 
     else if(__layer->GetType() == LayerType::pooling)
     {
-	UpdateDeltaPooling();
+	UpdateDeltaPooling(sample_index);
     } 
     else 
     {
@@ -382,7 +382,7 @@ void Neuron::UpdateDelta()
 }
 
 
-void Neuron::UpdateDeltaOutputLayer()
+void Neuron::UpdateDeltaOutputLayer(int sample_index)
 {
      // back propagation delta for output layer
     if(__sigmaPrime.size() <= 0) 
@@ -433,7 +433,7 @@ void Neuron::UpdateDeltaOutputLayer()
 }
 
 
-void Neuron::UpdateDeltaFC()
+void Neuron::UpdateDeltaFC(int sample_index)
 {
     // back propagation delta for fully connected layer
     if(__delta.size() != __sigmaPrime.size() - 1) 
@@ -479,7 +479,7 @@ void Neuron::UpdateDeltaFC()
     __delta.push_back(v);
 }
 
-void Neuron::UpdateDeltaCNN()
+void Neuron::UpdateDeltaCNN(int sample_index)
 {
     // back propagate delta for cnn layer
     if(__delta.size() != __sigmaPrime.size()-1)
@@ -530,7 +530,7 @@ void Neuron::UpdateDeltaCNN()
     __delta.push_back(tmp);
 }
 
-void Neuron::UpdateDeltaPooling()
+void Neuron::UpdateDeltaPooling(int sample_index)
 {
     // back propagate delta for pooling layer
     // for pooling layer, we need to check which neuron the delta we should give to

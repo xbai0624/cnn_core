@@ -58,7 +58,7 @@ public:
 
     //
     virtual void ForwardPropagateForSample(int sample_index);
-    virtual void BackwardPropagateForBatch();
+    virtual void BackwardPropagateForSample(int sample_index);
     virtual void ComputeCostInOutputLayerForCurrentSample(int sample_index);
 
     // update weights and bias, for external call
@@ -90,7 +90,7 @@ public:
     // !!::NOTE::!!  b/c Cost function is a sum of all batch samples
     // !!::NOTE::!!  this is not the same with A & Z images, they are calculated for each sample
     virtual std::vector<Images>& GetImagesDelta();
-    void UpdateImagesDelta();
+    void UpdateImagesDelta(int sample_index);
     // Fill A matrix for input layer
     void FillDataToInputLayerA();
 

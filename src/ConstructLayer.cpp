@@ -436,11 +436,11 @@ void ConstructLayer::ForwardPropagateForSample(int sample_index)
     UpdateImagesZ(sample_index);
 }
 
-void ConstructLayer::BackwardPropagateForBatch()
+void ConstructLayer::BackwardPropagateForSample(int sample_index)
 {
     // backward propagation:
     //     ---) compute delta for this layer
-    //     ---) only all samples in this batch finished, one can do this backward propagation
+    //     ---) only after all samples in this batch finished forward propagation, one can do this backward propagation
 
     for(size_t k=0;k<__neurons.size();k++)
     {
@@ -450,14 +450,14 @@ void ConstructLayer::BackwardPropagateForBatch()
 	    for(size_t j=0;j<dim.second;j++)
 	    {
 		if(__neurons[k][i][j]->IsActive()){
-		    __neurons[k][i][j] -> BackwardPropagateForBatch();
+		    __neurons[k][i][j] -> BackwardPropagateForSample(sample_index);
 		}
 	    }
 	}
     }
 
     // when propagation for this layer is done, update the Delta matrices
-    UpdateImagesDelta();
+    UpdateImagesDelta(sample_index);
 }
 
 
@@ -836,7 +836,7 @@ std::vector<Images>& ConstructLayer::GetImagesDelta()
     return __imageDelta;
 }
 
-void ConstructLayer::UpdateImagesDelta()
+void ConstructLayer::UpdateImagesDelta(int sample_index)
 {
     // __imageZ shold only store images from all active neurons, the matching info can be achieved from filter matrix
     //    drop out only happens on batch level
@@ -845,7 +845,7 @@ void ConstructLayer::UpdateImagesDelta()
     //
     //    The above comment is copied from UpdateImagesZ(); just to refresh your memory, no use in this function
     //
-    size_t l = __imageDelta.size();
+    //size_t l = __imageDelta.size();
 
     // extract the A matrices from neurons for current traning sample
     Images sample_image_delta;
@@ -861,8 +861,9 @@ void ConstructLayer::UpdateImagesDelta()
 		    auto delta_vector = __neurons[k][i][j]->GetDeltaVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
-			assert(delta_vector.size() - 1 == l);
-			Delta[i][j] = delta_vector.back();
+			//assert(delta_vector.size() - 1 == l); // obsolete
+			//Delta[i][j] = delta_vector.back();    // obsolete
+			Delta[i][j] = delta_vector[sample_index];    // obsolete
 		    }
 		    else
 		    {
@@ -877,7 +878,8 @@ void ConstructLayer::UpdateImagesDelta()
 	    assert(R.Dimension().first  == __activeNeuronDim.i);
 	    assert(R.Dimension().second == __activeNeuronDim.j);
 	}
-	__imageDelta.push_back(sample_image_delta);
+	//__imageDelta.push_back(sample_image_delta);
+	__imageDelta[sample_index] = sample_image_delta;
     }
     else if(__type == LayerType::cnn) // for cnn layer
     {
@@ -892,8 +894,9 @@ void ConstructLayer::UpdateImagesDelta()
 		    auto delta_vector = __neurons[k][i][j]->GetDeltaVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
-			assert(delta_vector.size() - 1 == l);
-			Delta[i][j] = delta_vector.back();
+			//assert(delta_vector.size() - 1 == l);
+			//Delta[i][j] = delta_vector.back();
+			Delta[i][j] = delta_vector[sample_index];
 		    }
 		    else
 		    {
@@ -903,7 +906,9 @@ void ConstructLayer::UpdateImagesDelta()
 	    }
 	    sample_image_delta.OutputImageFromKernel.push_back(Delta); // no need to filter
 	}
-	__imageDelta.push_back(sample_image_delta);
+	//__imageDelta.push_back(sample_image_delta); // obsolete
+	__imageDelta[sample_index] = sample_image_delta;
+
     }
     else // for other layer types
     {
