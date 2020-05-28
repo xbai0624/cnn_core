@@ -431,14 +431,14 @@ void Neuron::UpdateDeltaOutputLayer(int sample_index)
     float delta = dc_over_da * sigma_prime_i; 
 
     // save delta for this batch this neuron
-    __sigmaPrime[sample_index] = delta;
+    __delta[sample_index] = delta;
 }
 
 
 void Neuron::UpdateDeltaFC(int sample_index)
 {
     // back propagation delta for fully connected layer
-    if(__delta.size() != __sigmaPrime.size() - 1) 
+    if(__sigmaPrime.size() <= 0) 
     {
 	std::cout<<"Error: Neuron::UpdateDeltaFC() computing delta needs sigma^prime computed first."<<std::endl;
 	std::cout<<"        "<<__delta.size()<<" deltas, "<<__sigmaPrime.size()<<" sigma^primes"<<endl;
@@ -446,7 +446,7 @@ void Neuron::UpdateDeltaFC(int sample_index)
     }
 
     auto __deltaNext = __nextLayer->GetImagesDelta();
-    Images image_delta_Next = __deltaNext.back(); // get current sample delta
+    Images image_delta_Next = __deltaNext[sample_index]; // get current sample delta
     std::vector<Matrix> &deltaNext = image_delta_Next.OutputImageFromKernel;
     if( deltaNext.size() != 1 ) 
     {
@@ -475,10 +475,13 @@ void Neuron::UpdateDeltaFC(int sample_index)
 	exit(0);
     }
 
-    double s_prime = __sigmaPrime.back();
+    // get sigma^\prime for current sample
+    double s_prime = __sigmaPrime[sample_index];
+
     double v = deltaCurrentLayer[0][0];
     v = v*s_prime;
-    __delta.push_back(v);
+
+    __delta[sample_index] = v;
 }
 
 void Neuron::UpdateDeltaCNN(int sample_index)
