@@ -540,7 +540,7 @@ void Neuron::UpdateDeltaPooling(int sample_index)
 {
     // back propagate delta for pooling layer
     // for pooling layer, we need to check which neuron the delta we should give to
-    if(__delta.size() != __a.size() - 1) 
+    if(__a.size() <= 0) 
     {
 	// error
 	std::cout<<"Error: something wrong happend in error back propagation for pooling layer."<<std::endl;
@@ -549,7 +549,7 @@ void Neuron::UpdateDeltaPooling(int sample_index)
     }
 
     auto deltaNext = __nextLayer->GetImagesDelta();
-    Images & delta_image_for_current_sample = deltaNext.back(); // delta image for current sample
+    Images & delta_image_for_current_sample = deltaNext[sample_index]; // delta image for current sample
     std::vector<Matrix> &deltaImages = delta_image_for_current_sample.OutputImageFromKernel; // matrix
 
     if(deltaImages.size() <= __coord.k) 
@@ -568,16 +568,17 @@ void Neuron::UpdateDeltaPooling(int sample_index)
     size_t j = __coord.j%dim.second;
 
     double error = delta[i][j];
-    double a = __a.back(); // a value
+    double a = __a[sample_index]; // a value
 
     if(__layer->GetPoolingMethod() == PoolingMethod::Max) 
     {
 	// get all related input neurons, check if this neuron is the max one
 	auto a_matrix_current_layer_vec = __layer->GetImagesA(); // batch images
-	Images &image_current_sample = a_matrix_current_layer_vec.back(); // current sample
-	std::vector<Matrix> & matrix_current_sample = image_current_sample.OutputImageFromKernel; // matrix
+	Images &image_current_sample = a_matrix_current_layer_vec[sample_index]; // current sample
 
+	std::vector<Matrix> & matrix_current_sample = image_current_sample.OutputImageFromKernel; // matrix
 	Matrix a_matrix = matrix_current_sample[__coord.k];
+
 	double _tmp = 0;
 	for(size_t ii = i*dim.first;ii<(i+1)*dim.first;ii++){
 	    for(size_t jj = j*dim.second;jj<(j+1)*dim.second;jj++){
@@ -586,8 +587,13 @@ void Neuron::UpdateDeltaPooling(int sample_index)
 	}
 	if( a < _tmp ) error = 0; // this neuron is not the max one
     }
+    else
+    {
+        // to be added
+    }
+
     // for average pooling, give the same error to each neuron where it's related.
-    __delta.push_back(error);
+    __delta[sample_index] = error;
 }
 
 void Neuron::SetCoord(size_t i, size_t j, size_t k)
