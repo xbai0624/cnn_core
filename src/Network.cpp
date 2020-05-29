@@ -66,9 +66,10 @@ void Network::ConstructLayers()
     //layer_output -> EpochInit(); // output layer no dropout
     //layer_output -> BatchInit();
 
+    // 6) connect all layers
     l0->SetNextLayer(layer_output); // what a fuck!!! 
 
-    // 6) save all constructed layers
+    // 7) save all constructed layers
     __inputLayer = layer_input;
     __outputLayer = layer_output;
     __middleLayers.push_back(l0);
@@ -115,7 +116,7 @@ void Network::UpdateBatch()
 
     ForwardPropagateForBatch();
     BackwardPropagateForBatch();
-    //UpdateWeightsAndBias();
+    UpdateWeightsAndBiasForBatch();
 }
 
 void Network::ForwardPropagateForBatch()
@@ -171,14 +172,16 @@ void Network::BackwardPropagateForBatch()
     /// no need for input layer
 }
 
-void Network::UpdateWeightsAndBias()
+void Network::UpdateWeightsAndBiasForBatch()
 {
+/*
     // update w&b for  middle layers
     for(auto &i: __middleLayers)
 	i->UpdateWeightsAndBias();
 
     // update w&b for output layer
     __outputLayer -> UpdateWeightsAndBias();
+*/
 }
 
 std::vector<Matrix> Network::Classify()

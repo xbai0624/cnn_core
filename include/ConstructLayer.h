@@ -80,16 +80,19 @@ public:
     virtual void ProcessSample();
 
     // extract a value from neurons and re-organize these values in matrix form, only for current training sample
-    virtual std::vector<Images>& GetImagesA();
+    virtual std::vector<Images>& GetImagesActiveA(); // for drop out algorithm. If drop out not in use, 
+    virtual std::vector<Images>& GetImagesFullA();   // then these two (Active, Full) function results are the same
     void UpdateImagesA(int sample_index);
     // extract z value from neurons and re-organize these values in matrix form, only for current training sample
-    virtual std::vector<Images>& GetImagesZ();
+    virtual std::vector<Images>& GetImagesActiveZ();
+    virtual std::vector<Images>& GetImagesFullZ();
     void UpdateImagesZ(int sample_index);
     // extract delta value from neurons and re-organize these values in matrix form, only for current batch
     // !!::NOTE::!!  during backpropagation, delta need to be calculated over all batch samples,
     // !!::NOTE::!!  b/c Cost function is a sum of all batch samples
     // !!::NOTE::!!  this is not the same with A & Z images, they are calculated for each sample
-    virtual std::vector<Images>& GetImagesDelta();
+    virtual std::vector<Images>& GetImagesActiveDelta();
+    virtual std::vector<Images>& GetImagesFullDelta();
     void UpdateImagesDelta(int sample_index);
     // Fill A matrix for input layer
     void FillDataToInputLayerA();
@@ -164,17 +167,18 @@ private:
     //           for MLP, we have only 1 weight matrix, __weightMatrix.size() = 1
     //                    and matrix dimension is always (M, N), 
     //                    where N is the # of active neurons in previous layer
-    //                          M is the current layer size
+    //                          M is the # of active neurons in current layer
     std::vector<Matrix> __weightMatrix;
     // bias vector: for cnn, __biasVector.size() = # of kernels; for MLP, __biaseVector.size() = # of neurons
     std::vector<Matrix> __biasVector;
 
     // the following two vectors need to be updated in back propagation step, along with delta
-    // saves weight gradient in each batch
-    // Images.SampleOutputImage is a vector saves gradients for each kernel
+    // the following two vectors save weight & bias gradients in each batch
     std::vector<Images> __wGradient; 
+    //std::vector<Matrix> __wGradient; 
     // saves bias gradient in each batch
-    std::vector<Images> __bGradient; 
+    std::vector<Images> __bGradient;
+    //std::vector<Matrix> __bGradient; 
 
     double __learningRate = 0.0; // learning rate
 
@@ -188,9 +192,6 @@ private:
     // for fc layer, each matrix in this vector corresponds to a row of the original w&b, for easier to assign them to neurons
     std::vector<Matrix> __weightMatrixActive;
     std::vector<Matrix> __biasVectorActive;
-    // for fc layer: add one more matrix form for all active weights and bias
-    Matrix __weightMatrixActive_matrix_form_fc;
-    Matrix __biasVectorActive_matrix_form_fc;
 
     // 4):
     // this 3D matrix filters out active neurons for FC, active weight matrix element for CNN
@@ -200,9 +201,14 @@ private:
     // neuron images, Images is for sample
     // vector<Images> is for batch
     // size should = batch size
+    // the following three only save outputs from active neurons
     std::vector<Images> __imageA;
     std::vector<Images> __imageZ;
     std::vector<Images> __imageDelta;
+    // the following three save outputs from all neruons (active + inactive)
+    std::vector<Images> __imageAFull;
+    std::vector<Images> __imageZFull;
+    std::vector<Images> __imageDeltaFull;
     //std::vector<Images> __imageSigmaPrime;
     std::vector<double> __outputLayerCost;
 

@@ -34,7 +34,7 @@ public:
     void UpdateBatch();
     void ForwardPropagateForBatch();
     void BackwardPropagateForBatch();
-    void UpdateWeightsAndBias();
+    void UpdateWeightsAndBiasForBatch();
     float GetCost();
 
     // testing procedures

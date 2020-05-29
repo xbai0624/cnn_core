@@ -117,6 +117,10 @@ void ConstructLayer::BatchInit()
     __imageA.resize(batch_size);
     __imageZ.resize(batch_size);
     __imageDelta.resize(batch_size);
+
+    __imageAFull.resize(batch_size);
+    __imageZFull.resize(batch_size);
+    __imageDeltaFull.resize(batch_size);
     //__imageSigmaPrime.resize(batch_size);
     __outputLayerCost.resize(batch_size);
 
@@ -526,7 +530,7 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample(int sample_index)
     //size_t sample_number = __imageA.size(); // obsolete
 
     //Images sample_image = __imageA.back();
-    Images sample_image = __imageA[sample_index];
+    Images sample_image = __imageA[sample_index]; // output layer drop out is not used for sure, so use __imageA is OK.
     assert(sample_image.GetNumberOfKernels() == 1); // output layer must be a fully connected layer, so one kernel
     // now get a_i
     Matrix sample_A = sample_image.OutputImageFromKernel[0];
@@ -593,11 +597,17 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample(int sample_index)
     Images images_delta_from_current_sample;
     images_delta_from_current_sample.OutputImageFromKernel.push_back(delta); // only one kernel in fc layer
     __imageDelta[sample_index]=images_delta_from_current_sample;
+    __imageDeltaFull[sample_index]=images_delta_from_current_sample; // in output layer, dropout is not used for sure
 }
 
-std::vector<Images>& ConstructLayer::GetImagesA()
+std::vector<Images>& ConstructLayer::GetImagesActiveA()
 {
     return __imageA;
+}
+
+std::vector<Images>& ConstructLayer::GetImagesFullA()
+{
+    return __imageAFull;
 }
 
 
@@ -607,7 +617,8 @@ void ConstructLayer::FillDataToInputLayerA()
     auto input_data = __p_data_interface->GetCurrentBatchData();
 
     // first clear the previous batch
-    __imageA.clear();
+    __imageA.clear(); // input layer dropout is not used
+    __imageAFull.clear();
 
     // load all batch data to memory, this should be faster
     for(auto &i: input_data)
@@ -619,6 +630,7 @@ void ConstructLayer::FillDataToInputLayerA()
 
 	// push this image to images of this batch
 	__imageA.push_back(image_a);
+	__imageAFull.push_back(image_a);
     }
 
     cout<<">>>: "<<__imageA.size()<<" samples in current batch."<<endl;
@@ -626,7 +638,7 @@ void ConstructLayer::FillDataToInputLayerA()
 
 void ConstructLayer::ClearUsedSampleForInputLayer_obsolete()
 {
-    // not needed anymore
+    // this function not needed anymore
     if(__type != LayerType::input)
     {
         cout<<"Error: Clear used sample for input layer only works for input layer..."<<endl;
@@ -684,6 +696,7 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 
     // extract the A matrices from neurons for current traning sample
     Images sample_image_A;
+    Images sample_image_A_full;
 
     if(__type == LayerType::fullyConnected || __type == LayerType::output) 
     {
@@ -704,10 +717,14 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 		    }
 		    else
 		    {
+		        // if neuron is inactive, set it to 0
 			A[i][j] = 0;
 		    }
 		}
 	    }
+	    // save full image
+	    sample_image_A_full.OutputImageFromKernel.push_back(A);
+
 	    // only save active elements
 	    Matrix R = filterMatrix(A, __activeFlag[k]);
 	    sample_image_A.OutputImageFromKernel.push_back(R);
@@ -717,6 +734,7 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 	}
 	//__imageA.push_back(sample_image_A); // obsolete
 	__imageA[sample_id] = sample_image_A;
+	__imageAFull[sample_id] = sample_image_A_full;
     }
     else if(__type == LayerType::cnn) // for cnn layer
     {
@@ -742,18 +760,25 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 		}
 	    }
 	    sample_image_A.OutputImageFromKernel.push_back(A); // no need to filter
+	    sample_image_A_full.OutputImageFromKernel.push_back(A); // no need to filter
 	}
 	//__imageA.push_back(sample_image_A);
 	__imageA[sample_id] = sample_image_A;
+	__imageAFull[sample_id] = sample_image_A;
     }
     else // for other layer types
     {
     }
 }
 
-std::vector<Images>& ConstructLayer::GetImagesZ()
+std::vector<Images>& ConstructLayer::GetImagesActiveZ()
 {
     return __imageZ;
+}
+
+std::vector<Images>& ConstructLayer::GetImagesFullZ()
+{
+    return __imageZFull;
 }
 
 void ConstructLayer::UpdateImagesZ(int sample_id)
@@ -762,10 +787,10 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
     //    drop out only happens on batch level
     //    so imageZ will clear after each batch is done
     //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix on batch level
-    //size_t l = __imageZ.size();
 
     // extract the A matrices from neurons for current traning sample
     Images sample_image_Z;
+    Images sample_image_Z_full;
 
     if(__type == LayerType::fullyConnected) // for fully connected layer
     {
@@ -784,10 +809,13 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
 		    }
 		    else
 		    {
+		        // if neuron is inactive, set it to 0
 			Z[i][j] = 0;
 		    }
 		}
 	    }
+	    // save full image
+	    sample_image_Z_full.OutputImageFromKernel.push_back(Z);
 	    // only save active elements
 	    Matrix R = filterMatrix(Z, __activeFlag[k]);
 	    sample_image_Z.OutputImageFromKernel.push_back(R);
@@ -797,6 +825,7 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
 	}
 	//__imageZ.push_back(sample_image_Z);
 	__imageZ[sample_id] = sample_image_Z;
+	__imageZFull[sample_id] = sample_image_Z_full;
     }
     else if(__type == LayerType::cnn) // for cnn layer
     {
@@ -822,9 +851,11 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
 		}
 	    }
 	    sample_image_Z.OutputImageFromKernel.push_back(Z); // no need to filter
+	    sample_image_Z_full.OutputImageFromKernel.push_back(Z); // no need to filter
 	}
 	//__imageZ.push_back(sample_image_Z);
 	__imageZ[sample_id] = sample_image_Z;
+	__imageZFull[sample_id] = sample_image_Z_full;
     }
     else // for other layer types
     {
@@ -832,24 +863,30 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
 }
 
 
-std::vector<Images>& ConstructLayer::GetImagesDelta()
+std::vector<Images>& ConstructLayer::GetImagesActiveDelta()
 {
     return __imageDelta;
 }
 
+std::vector<Images>& ConstructLayer::GetImagesFullDelta()
+{
+    return __imageDeltaFull;
+}
+
+
 void ConstructLayer::UpdateImagesDelta(int sample_index)
 {
-    // __imageZ shold only store images from all active neurons, the matching info can be achieved from filter matrix
+    // __imageDelta shold only store images from all active neurons, the matching info can be achieved from filter matrix
     //    drop out only happens on batch level
     //    so imageZ will clear after each batch is done
     //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix on batch level
     //
     //    The above comment is copied from UpdateImagesZ(); just to refresh your memory, no use in this function
     //
-    //size_t l = __imageDelta.size();
 
     // extract the A matrices from neurons for current traning sample
     Images sample_image_delta;
+    Images sample_image_delta_full;
 
     if(__type == LayerType::fullyConnected) // for fully connected layer
     {
@@ -868,10 +905,13 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 		    }
 		    else
 		    {
+		        // if neuron is inactive, set it to 0
 			Delta[i][j] = 0;
 		    }
 		}
 	    }
+	    // save full delta image
+	    sample_image_delta_full.OutputImageFromKernel.push_back(Delta);
 	    // only save active elements
 	    Matrix R = filterMatrix(Delta, __activeFlag[k]);
 	    sample_image_delta.OutputImageFromKernel.push_back(R);
@@ -881,6 +921,7 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 	}
 	//__imageDelta.push_back(sample_image_delta);
 	__imageDelta[sample_index] = sample_image_delta;
+	__imageDeltaFull[sample_index] = sample_image_delta_full;
     }
     else if(__type == LayerType::cnn) // for cnn layer
     {
@@ -906,10 +947,11 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 		}
 	    }
 	    sample_image_delta.OutputImageFromKernel.push_back(Delta); // no need to filter
+	    sample_image_delta_full.OutputImageFromKernel.push_back(Delta); 
 	}
 	//__imageDelta.push_back(sample_image_delta); // obsolete
 	__imageDelta[sample_index] = sample_image_delta;
-
+	__imageDeltaFull[sample_index] = sample_image_delta_full;
     }
     else // for other layer types
     {
@@ -1306,6 +1348,11 @@ void ConstructLayer::ClearImage()
     __imageA.clear();
     __imageZ.clear();
     __imageDelta.clear();
+
+    __imageAFull.clear();
+    __imageZFull.clear();
+    __imageDeltaFull.clear();
+
 }
 
 NeuronCoord ConstructLayer::GetActiveNeuronDimension()
@@ -1416,7 +1463,12 @@ Layer* ConstructLayer::GetPrevLayer()
 
 void ConstructLayer::UpdateWeightsAndBias()
 {
-    // after finishing one training sample, update weights and bias
+    // after finishing one training batch, update weights and bias
+
+    // 1) first update w&b graidents
+    UpdateWeightsAndBiasGradients();
+
+    // 2) then update weights and bias
     auto layerType = this->GetType();
 
     if(layerType == LayerType::fullyConnected) 
@@ -1440,7 +1492,7 @@ void ConstructLayer::UpdateWeightsAndBias()
 
 void ConstructLayer::UpdateWeightsAndBiasGradients()
 {
-    // after finishing one training sample, update weights and bias
+    // after finishing one training batch, update weights and bias gradients
     auto layerType = this->GetType();
 
     if(layerType == LayerType::fullyConnected) 
@@ -1466,33 +1518,42 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 {
     // after finishing one batch, update weights and bias, for FC layer
     // get output from previous layer for current training sample
-    auto a_images = __prevLayer->GetImagesA(); // a images from previous layer
-    auto d_images = this->GetImagesDelta(); // delta images from current layer
+    auto a_images = __prevLayer->GetImagesActiveA(); // a images from previous layer
+    auto d_images = this->GetImagesActiveDelta(); // delta images from current layer
+    // NOTE: 'a' and 'delta' include value correpsonds to disabled neurons
+    //       it's just these values have been set to 0 when updating __imagesA, __imagesDelta
+    //       see Functions UpdateImagesA() and UpdateImagesDelta()
+    //       since dC/dw_ij = a^{l-1}_j * delta^l_k, so if a = 0 or delta = 0, then dC/dw = 0, namely no change on w for inactive neurons
     if(a_images.size() != d_images.size()) {
 	std::cout<<"Error: batch size not equal..."<<std::endl;
 	exit(0);
     }
     if(a_images.back().OutputImageFromKernel.size() != 1 ) {
 	std::cout<<"Error: updating weights and bias gradients for FC, dimension not match."<<std::endl;
+	std::cout<<"       kernel size: "<<a_images.back().OutputImageFromKernel.size()<<std::endl;
 	exit(0);
     }
 
+    // so directly work on __weightMatrix, not __weightMatrixActive
     // check layer type
-    if(__weightMatrixActive.size() != 1) {
+    if(__weightMatrix.size() != 1) {
 	std::cout<<"Error: more than 1 weight matrix exist in fully connected layer."<<std::endl;
 	exit(0);
     }
 
-    // loop for batch
+    // loop for samples
     for(size_t i=0;i<a_images.size();i++)
     {
 	Matrix a_matrix = a_images[i].OutputImageFromKernel[0]; // 'a' image from previous layer
 	Matrix d_matrix = d_images[i].OutputImageFromKernel[0]; // 'd' image from current layer
 
-	auto d1 = (__weightMatrixActive[0]).Dimension(), d2 = a_matrix.Dimension(), d3 = d_matrix.Dimension();
+	auto d1 = (__weightMatrix[0]).Dimension(), d2 = a_matrix.Dimension(), d3 = d_matrix.Dimension();
 	if(d1.first != d3.first || d1.second != d2.first)
 	{
 	    std::cout<<"Error: updating weights and bias gradients for FC, dimension not match."<<std::endl;
+	    std::cout<<"       current layer 'w' matrix dimension: "<<d1<<std::endl;
+	    std::cout<<"       previous layer 'a' matrix dimension: "<<d2<<std::endl;
+	    std::cout<<"       current layer 'delta' matrix dimension: "<<d3<<std::endl;
 	    exit(0);
 	}
 
@@ -1513,10 +1574,10 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 void ConstructLayer::UpdateWeightsAndBiasFC()
 {
     // after finishing one batch, update weights and bias, for FC layer
-    // get output from previous layer for current training sample
     size_t M = __imageDelta.size(); // batch size
     if( M != __wGradient.size() ) {
 	std::cout<<"Error: update FC weights, batch size not match."<<std::endl;
+	std::cout<<"weight gradient size: "<<__wGradient.size()<<endl;
 	exit(0);
     }
     if( __wGradient[0].OutputImageFromKernel.size() != 1 || __bGradient[0].OutputImageFromKernel.size()!=1) 
@@ -1577,9 +1638,9 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
     // So one need to loop for kernels
 
     // get 'a' matrix from previous layer for current training sample
-    auto aVec = __prevLayer -> GetImagesA();
+    auto aVec = __prevLayer -> GetImagesActiveA();
     // get 'delta' matrix for current layer
-    auto deltaVec = this -> GetImagesDelta();
+    auto deltaVec = this -> GetImagesActiveDelta();
 
     // get kernel number
     size_t nKernel = __weightMatrixActive.size();

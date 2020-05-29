@@ -159,7 +159,7 @@ void Neuron::UpdateZFC(int sample_index)
     // currently layer and its previous layer are fully connected
     // weight matrix dimension will be: (1, M)
     Layer* __previousLayer = __layer->GetPrevLayer();
-    auto _t = __previousLayer -> GetImagesA();
+    auto _t = __previousLayer -> GetImagesActiveA();
     //cout<<"batch size: "<<_t.size()<<endl;
     //cout<<"kernel number: "<<_t[0].GetNumberOfKernels()<<endl;
     //cout<<" image dimension: "<<_t[0].OutputImageFromKernel[0].Dimension()<<endl;
@@ -203,7 +203,7 @@ void Neuron::UpdateZCNN(int sample_index)
     // cnn layer
     // every single output image needs input from all input images
     Layer *__previousLayer = __layer->GetPrevLayer();
-    auto inputImage = __previousLayer->GetImagesA();
+    auto inputImage = __previousLayer->GetImagesActiveA();
     auto w_dim = __w->Dimension();
     int stride = __layer->GetCNNStride();
 
@@ -241,7 +241,7 @@ void Neuron::UpdateZPooling(int sample_index)
     // pooling layer
     // should be with cnn layer, just kernel matrix all elements=1, bias = 0;
     Layer* __previousLayer = __layer->GetPrevLayer();
-    auto inputImage = __previousLayer->GetImagesA();
+    auto inputImage = __previousLayer->GetImagesActiveA();
     //if(inputImage.back().OutputImageFromKernel.size() < __coord.k)
     if(inputImage[sample_index].OutputImageFromKernel.size() < __coord.k)
     {
@@ -463,7 +463,7 @@ void Neuron::UpdateDeltaFC(int sample_index)
 
     Layer* __nextLayer = __layer->GetNextLayer();
 
-    auto __deltaNext = __nextLayer->GetImagesDelta();
+    auto __deltaNext = __nextLayer->GetImagesActiveDelta();
     //cout<<"delta images batch size: "<<__deltaNext.size()<<endl;
     Images image_delta_Next = __deltaNext[sample_index]; // get current sample delta
     std::vector<Matrix> &deltaNext = image_delta_Next.OutputImageFromKernel;
@@ -527,7 +527,7 @@ void Neuron::UpdateDeltaCNN(int sample_index)
 
     Layer* __nextLayer = __layer->GetNextLayer();
 
-    auto deltaVecNext = __nextLayer->GetImagesDelta();
+    auto deltaVecNext = __nextLayer->GetImagesActiveDelta();
     auto weightVecNext = __nextLayer->GetWeightMatrix();
 
     Images &image_next_layer = deltaVecNext[sample_index]; // delta for current training sample
@@ -583,7 +583,7 @@ void Neuron::UpdateDeltaPooling(int sample_index)
 
     Layer* __nextLayer = __layer->GetNextLayer();
 
-    auto deltaNext = __nextLayer->GetImagesDelta();
+    auto deltaNext = __nextLayer->GetImagesActiveDelta();
     Images & delta_image_for_current_sample = deltaNext[sample_index]; // delta image for current sample
     std::vector<Matrix> &deltaImages = delta_image_for_current_sample.OutputImageFromKernel; // matrix
 
@@ -608,7 +608,7 @@ void Neuron::UpdateDeltaPooling(int sample_index)
     if(__layer->GetPoolingMethod() == PoolingMethod::Max) 
     {
 	// get all related input neurons, check if this neuron is the max one
-	auto a_matrix_current_layer_vec = __layer->GetImagesA(); // batch images
+	auto a_matrix_current_layer_vec = __layer->GetImagesActiveA(); // batch images
 	Images &image_current_sample = a_matrix_current_layer_vec[sample_index]; // current sample
 
 	std::vector<Matrix> & matrix_current_sample = image_current_sample.OutputImageFromKernel; // matrix

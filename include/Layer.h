@@ -124,10 +124,11 @@ std::ostream & operator<<(std::ostream&, const NeuronCoord &c);
 
 
 // a struct holding layer output image of one single training sample
-// so each batch will have a vector of this struct
+// so each batch will have a vector of this (Images) struct
 struct Images
 {
     std::vector<Matrix> OutputImageFromKernel; // this vector is for different cnn kernels 
+    // this vector saves: <Kernel_0, Kernel_1, Kernel_2, ...... , Kernel_n>
 
     Images()
     {}
@@ -196,11 +197,14 @@ public:
     virtual void InitWeightsAndBias()=0;
 
     // extract a value from neurons and re-organize these values in matrix form, only for current training sample
-    virtual std::vector<Images>& GetImagesA()=0;
+    virtual std::vector<Images>& GetImagesActiveA()=0;
+    virtual std::vector<Images>& GetImagesFullA()=0;
     // extract z value from neurons and re-organize these values in matrix form, only for current training sample
-    virtual std::vector<Images>& GetImagesZ()=0;
+    virtual std::vector<Images>& GetImagesActiveZ()=0;
+    virtual std::vector<Images>& GetImagesFullZ()=0;
     // extract delta value from neurons and re-organize these values in matrix form, only for current training sample
-    virtual std::vector<Images>& GetImagesDelta()=0;
+    virtual std::vector<Images>& GetImagesActiveDelta()=0;
+    virtual std::vector<Images>& GetImagesFullDelta()=0;
 
     // get active neuron flags
     //virtual std::vector<std::vector<std::vector<NeuronCoord>>>& GetActiveNeuronFlags()=0;
