@@ -289,15 +289,24 @@ void Neuron::UpdateZPooling(int sample_index)
 void Neuron::UpdateA(int sample_index)
 {
     // update a for current training sample
-    //double v = __z.back();
     double v = __z[sample_index];
+    //cout<<"debug: sample_id: "<<sample_index<<": z = "<<v<<endl;
     double a = -100.; // theorectially, a>=-1
     if(__funcType == ActuationFuncType::Sigmoid)
+    {
 	a = __sigmoid(v);
+	//cout<<"sigmoid"<<endl;
+    }
     else if(__funcType == ActuationFuncType::Tanh)
+    {
 	a = __tanh(v);
+	//cout<<"tanh"<<endl;
+    }
     else if(__funcType == ActuationFuncType::Relu)
+    {
 	a = __relu(v);
+	//cout<<"relu"<<endl;
+    }
     else
 	std::cout<<"Error: unsupported actuation function type."<<std::endl;
 
@@ -307,6 +316,8 @@ void Neuron::UpdateA(int sample_index)
 	         <<endl;
 	exit(0);
     }
+    //cout<<"debug: sample_id: "<<sample_index<<": a = "<<a<<endl;
+    //getchar();
     //__a.push_back(a);
     __a[sample_index] = a;
 }

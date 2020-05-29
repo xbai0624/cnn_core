@@ -24,8 +24,8 @@ bool operator!=(std::pair<size_t, size_t> left, std::pair<size_t, size_t> right)
 
 std::ostream &operator<<(std::ostream &os, const std::pair<size_t, size_t> &d)
 {
-    os<<std::setfill(' ')<<std::setw(6)<<d.first
-        <<std::setfill(' ')<<std::setw(6)<<d.second
+    os<<std::setfill(' ')<<std::setw(8)<<std::scientific<<d.first
+        <<std::setfill(' ')<<std::setw(8)<<std::scientific<<d.second
         <<std::endl;
     return os;
 }

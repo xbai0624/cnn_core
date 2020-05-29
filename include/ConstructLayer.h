@@ -180,7 +180,7 @@ private:
     std::vector<Images> __bGradient;
     //std::vector<Matrix> __bGradient; 
 
-    double __learningRate = 0.0; // learning rate
+    double __learningRate = 0.1; // learning rate
 
     // regularization always active, if you don't want it, set __regularization parameter to 0
     Regularization __regularizationMethod = Regularization::L2;
@@ -188,8 +188,9 @@ private:
 
     // 3):
     // active weight matrix and active vector bias --for dropout algorithm
-    // for cnn layer, each matrix in this vector corresponds to a kernel
-    // for fc layer, each matrix in this vector corresponds to a row of the original w&b, for easier to assign them to neurons
+    //     for cnn layer, each matrix in this vector corresponds to a kernel
+    //     for fc layer, each matrix in this vector corresponds to a row of the original w&b, for easier to assign them to neurons
+    //                   so for fc layer, __weightMatrixActive is organized differently with __weightMatrix
     std::vector<Matrix> __weightMatrixActive;
     std::vector<Matrix> __biasVectorActive;
 

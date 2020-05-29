@@ -703,7 +703,8 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 	// for fully connected layer; output layer is also a fully connected layer
 	for(size_t k=0;k<__neuronDim.k;k++) // kernel
 	{
-	    Matrix A( __neuronDim.i, __neuronDim.j);
+	    Matrix A( __neuronDim.i, __neuronDim.j, 0);
+	    //cout<<"A before filling"<<endl<<A<<endl;
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
@@ -724,6 +725,7 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 	    }
 	    // save full image
 	    sample_image_A_full.OutputImageFromKernel.push_back(A);
+	    //cout<<"A after filling: "<<endl<<A<<endl;
 
 	    // only save active elements
 	    Matrix R = filterMatrix(A, __activeFlag[k]);
@@ -796,7 +798,8 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
     {
 	for(size_t k=0;k<__neuronDim.k;k++) // kernel
 	{
-	    Matrix Z( __neuronDim.i, __neuronDim.j);
+	    Matrix Z( __neuronDim.i, __neuronDim.j, 0);
+	    //cout<<"Z before filling"<<endl<<Z<<endl;
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
@@ -814,6 +817,7 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
 		    }
 		}
 	    }
+	    //cout<<"Z after filing: "<<endl<<Z<<endl;
 	    // save full image
 	    sample_image_Z_full.OutputImageFromKernel.push_back(Z);
 	    // only save active elements
@@ -892,7 +896,9 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
     {
 	for(size_t k=0;k<__neuronDim.k;k++) // kernel
 	{
-	    Matrix Delta( __neuronDim.i, __neuronDim.j);
+	    Matrix Delta( __neuronDim.i, __neuronDim.j, 0);
+	    //cout<<"sample index: "<<sample_index<<endl;
+	    //cout<<"before filling delta"<<endl<<Delta<<endl;
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
@@ -912,6 +918,8 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 	    }
 	    // save full delta image
 	    sample_image_delta_full.OutputImageFromKernel.push_back(Delta);
+	    //cout<<"full image delta: "<<endl<<Delta<<endl;
+	    //getchar();
 	    // only save active elements
 	    Matrix R = filterMatrix(Delta, __activeFlag[k]);
 	    sample_image_delta.OutputImageFromKernel.push_back(R);
@@ -1284,7 +1292,9 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 	    std::vector<float> act_row;
 	    for(size_t j=0;j<dim.second;j++)
 	    {
-		if(__prevLayer != nullptr) // current layer is not input layer
+		if(__prevLayer != nullptr &&   // current layer is not input layer
+			(__prevLayer->GetType() == LayerType::input || __prevLayer->GetType() == LayerType::fullyConnected ) // only fc layer and input layer no need for other type layers
+		  )
 		{
 		    auto filter_prev = __prevLayer->GetActiveFlag();
 		    assert(filter_prev.size() == 1);
@@ -1516,10 +1526,11 @@ void ConstructLayer::UpdateWeightsAndBiasGradients()
 
 void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 {
+    //cout<<__func__<<" started."<<endl;
     // after finishing one batch, update weights and bias, for FC layer
     // get output from previous layer for current training sample
-    auto a_images = __prevLayer->GetImagesActiveA(); // a images from previous layer
-    auto d_images = this->GetImagesActiveDelta(); // delta images from current layer
+    auto a_images = __prevLayer->GetImagesFullA(); // a images from previous layer
+    auto d_images = this->GetImagesFullDelta(); // delta images from current layer
     // NOTE: 'a' and 'delta' include value correpsonds to disabled neurons
     //       it's just these values have been set to 0 when updating __imagesA, __imagesDelta
     //       see Functions UpdateImagesA() and UpdateImagesDelta()
@@ -1541,6 +1552,12 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 	exit(0);
     }
 
+    //cout<<"sample size: "<<d_images.size()<<endl;
+    //for(auto &i: d_images)
+    //{
+    //    cout<<i.OutputImageFromKernel[0].Dimension()<<endl;
+    //    cout<<i.OutputImageFromKernel[0]<<endl;
+    //}
     // loop for samples
     for(size_t i=0;i<a_images.size();i++)
     {
@@ -1557,8 +1574,17 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 	    exit(0);
 	}
 
+	//cout<<"sample_id: "<<i<<endl;
 	Matrix a_T = a_matrix.Transpose();
 	Matrix dw = d_matrix * a_T;
+
+        //cout<<a_T.Dimension()<<endl;
+	//cout<<"a :"<<endl<<a_T<<endl;
+	//cout<<d_matrix.Dimension()<<endl;
+	//cout<<"d :"<<endl<<d_matrix<<endl;
+	//cout<<"dw: "<<endl<<dw<<endl;
+	//cout<<"dw matrix."<<endl;
+	//getchar();
 
 	// push bias gradient for current training sample
 	Images tmp_w_gradients;
@@ -1569,12 +1595,32 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 	tmp_b_gradients.OutputImageFromKernel.push_back(d_matrix);
 	__bGradient.push_back(tmp_b_gradients); // bias gradient equals delta
     }
+
+    //cout<<"INFO: "<<__func__<<" finished."<<endl;
 } 
+
+static void maskMatrix(Matrix& M, Matrix& F)
+{
+    // set all inactive elements to 0
+    auto dimM = M.Dimension();
+    auto dimF = F.Dimension();
+
+    assert(dimM == dimF);
+
+    for(size_t i=0;i<dimF.first;i++)
+    {
+        for(size_t j=0;j<dimF.second;j++)
+	{
+	    if(F[i][j] == 0) M[i][j] = 0;
+	}
+    }
+}
 
 void ConstructLayer::UpdateWeightsAndBiasFC()
 {
+    cout<<__func__<<" started..."<<endl;
     // after finishing one batch, update weights and bias, for FC layer
-    size_t M = __imageDelta.size(); // batch size
+    size_t M = __imageDeltaFull.size(); // batch size
     if( M != __wGradient.size() ) {
 	std::cout<<"Error: update FC weights, batch size not match."<<std::endl;
 	std::cout<<"weight gradient size: "<<__wGradient.size()<<endl;
@@ -1588,36 +1634,65 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     }
 
     // gradient descent
-    if(__weightMatrixActive.size() != 1) {
+    if(__weightMatrix.size() != __neuronDim.k) {
 	std::cout<<"Error: update FC layer weights, more than 1 weight matrix found."<<std::endl;
+	std::cout<<"__weightMatrix size: "<<__weightMatrix.size()<<std::endl;
+	std::cout<<"neuron dimension: "<<__neuronDim<<std::endl;
 	exit(0);
     }
-    Matrix dw((__weightMatrixActive[0]).Dimension()); 
+    Matrix dw((__weightMatrix[0]).Dimension(), 0); 
     for(size_t i=0;i<M;i++){ // sum x (batches)
 	dw  = dw + __wGradient[i].OutputImageFromKernel[0];
+	//cout<<__wGradient[i].OutputImageFromKernel[0]<<endl;
+	//cout<<i<<" before sum"<<endl;
+	//getchar();
     }
     dw = dw * float(__learningRate/(double)M); // over batch 
+    //cout<<"learning rate: "<<float(__learningRate/(double)M)<<endl;
+
+    // Get filter Matrix for masking Regularization
+    assert(__activeFlag.size() == 1);
+    auto convertFilterToMatrix = [&](Filter2D & F) -> Matrix
+    {
+        auto dim = F.Dimension();
+	Matrix M(dim, 0);
+	for(size_t i=0;i<dim.first;i++)
+	{
+	    for(size_t j=0;j<dim.second;j++)
+	    {
+	        if(F[i][j]) M[i][j] = 1;
+	    }
+	}
+	return M;
+    };
+    Matrix currentLayerFilter = convertFilterToMatrix(__activeFlag[0]);
+    Matrix prevLayerFilter(1, dw.Dimension().second, 1);
+    cout<<prevLayerFilter<<endl;
+    cout<<dw<<endl;
+    getchar();
 
     // Regularization
     double f_regularization = 0.;
     if(__regularizationMethod == Regularization::L2) 
     {
 	f_regularization = 1 - __learningRate * __regularizationParameter / M;
-	(__weightMatrixActive[0]) = (__weightMatrixActive[0]) * f_regularization - dw;
+	(__weightMatrix[0]) = (__weightMatrix[0]) * f_regularization - dw;
     } 
     else if(__regularizationMethod == Regularization::L1) 
     {
-	Matrix _t = (__weightMatrixActive[0]); // make a copy of weight matrix
+	Matrix _t = (__weightMatrix[0]); // make a copy of weight matrix
 	_t(&SGN); // get the sign for each element in weight matrix
 	_t = _t * (__learningRate*__regularizationParameter/(double)M); // L1 regularization part
-	(__weightMatrixActive[0]) = (__weightMatrixActive[0]) -  _t; // apply L1 regularization to weight matrix
-	(__weightMatrixActive[0]) = (__weightMatrixActive[0]) - dw; // apply gradient decsent part
+	(__weightMatrix[0]) = (__weightMatrix[0]) -  _t; // apply L1 regularization to weight matrix
+	(__weightMatrix[0]) = (__weightMatrix[0]) - dw; // apply gradient decsent part
     } 
     else 
     {
 	std::cout<<"Error: update FC weights, unsupported regularization."<<std::endl;
 	exit(0);
     }
+
+    cout<<"reached hrere..."<<endl;
 
     // bias
     Matrix db(__biasVector[0].Dimension());
@@ -1627,6 +1702,8 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     db = db / (double)M;
     db = db * __learningRate;
     __biasVector[0] = __biasVector[0] - db;
+
+    cout<<__func__<<" ended.."<<endl;
 }
 
 void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
@@ -1638,9 +1715,9 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
     // So one need to loop for kernels
 
     // get 'a' matrix from previous layer for current training sample
-    auto aVec = __prevLayer -> GetImagesActiveA();
+    auto aVec = __prevLayer -> GetImagesFullA();
     // get 'delta' matrix for current layer
-    auto deltaVec = this -> GetImagesActiveDelta();
+    auto deltaVec = this -> GetImagesFullDelta();
 
     // get kernel number
     size_t nKernel = __weightMatrixActive.size();

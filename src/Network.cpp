@@ -165,8 +165,8 @@ void Network::BackwardPropagateForBatch()
 	__outputLayer -> BackwardPropagateForSample(i);
 
 	// then do middle layers
-	for(int i=NLayers-1; i>=0;i--)
-	    __middleLayers[i]->BackwardPropagateForSample(i);
+	for(int nlayer=NLayers-1; nlayer>=0; nlayer--)
+	    __middleLayers[nlayer]->BackwardPropagateForSample(i);
     }
 
     /// no need for input layer
@@ -174,14 +174,12 @@ void Network::BackwardPropagateForBatch()
 
 void Network::UpdateWeightsAndBiasForBatch()
 {
-/*
     // update w&b for  middle layers
     for(auto &i: __middleLayers)
 	i->UpdateWeightsAndBias();
 
     // update w&b for output layer
     __outputLayer -> UpdateWeightsAndBias();
-*/
 }
 
 std::vector<Matrix> Network::Classify()
