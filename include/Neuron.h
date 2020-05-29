@@ -50,9 +50,9 @@ public:
     double __relu(double);
 
     // setters
-    void SetLayer(Layer* ); // layer information
-    void SetPreviousLayer(Layer*);
-    void SetNextLayer(Layer *);
+    void SetLayer(Layer*); // layer information
+    //void SetPreviousLayer(Layer*);
+    //void SetNextLayer(Layer *);
     void SetCoord(size_t _i=0, size_t _j=0, size_t _k=0); // set neuron(pixel) coordinates in current layer
     void SetCoordI(size_t);
     void SetCoordJ(size_t);
@@ -102,8 +102,8 @@ private:
 
     // the layer that this neurons belongs to
     Layer *__layer = nullptr;
-    Layer *__previousLayer = nullptr;
-    Layer *__nextLayer = nullptr;
+    //Layer *__previousLayer = nullptr;
+    //Layer *__nextLayer = nullptr;
 
     // for dropout algorithm, dropout algorithm will disable
     // some neurons in a layer

@@ -233,8 +233,8 @@ public:
     virtual void SetPoolingMethod(PoolingMethod)=0;
     virtual void SetCNNStride(int)=0;
     virtual void SetDropOutFactor(float)=0;
-    virtual void SetPrevLayer(Layer *) = 0;
-    virtual void SetNextLayer(Layer *) = 0;
+    virtual void SetPrevLayer(Layer *) = 0; // pass pointer by reference
+    virtual void SetNextLayer(Layer *) = 0; // pass pointer by reference
     virtual void SetCostFuncType(CostFuncType t) = 0;
 
     // getters
@@ -252,6 +252,8 @@ public:
     virtual int GetBatchSize() = 0;
     virtual CostFuncType GetCostFuncType() = 0;
     virtual DataInterface * GetDataInterface() = 0;
+    virtual Layer* GetNextLayer() = 0;
+    virtual Layer* GetPrevLayer() = 0;
 
 private:
     // reserved section

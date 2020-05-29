@@ -66,6 +66,8 @@ void Network::ConstructLayers()
     //layer_output -> EpochInit(); // output layer no dropout
     //layer_output -> BatchInit();
 
+    l0->SetNextLayer(layer_output); // what a fuck!!! 
+
     // 6) save all constructed layers
     __inputLayer = layer_input;
     __outputLayer = layer_output;
@@ -112,7 +114,7 @@ void Network::UpdateBatch()
     __outputLayer->BatchInit(); // input layer do not need init
 
     ForwardPropagateForBatch();
-    //BackwardPropagateForBatch();
+    BackwardPropagateForBatch();
     //UpdateWeightsAndBias();
 }
 

@@ -223,8 +223,9 @@ void ConstructLayer::InitNeurons()
 	    for(size_t jj=0;jj<j;jj++)
 	    {
 		__neurons[kk][ii][jj]->SetLayer(dynamic_cast<Layer*>(this));
-		__neurons[kk][ii][jj]->SetPreviousLayer(__prevLayer);
-		__neurons[kk][ii][jj]->SetNextLayer(__nextLayer);
+		//__neurons[kk][ii][jj]->SetLayer(this);
+		//__neurons[kk][ii][jj]->SetPreviousLayer(__prevLayer); // obsolete
+		//__neurons[kk][ii][jj]->SetNextLayer(__nextLayer);     // obsolete
 	    }
     }
 }
@@ -921,6 +922,7 @@ void ConstructLayer::UpdateCoordsForActiveNeuronFC()
     // update coords for active neuron
     assert(__neurons.size() == 1); 
     auto dim = __neurons[0].Dimension();
+    //cout<<"Neuron dimension in FC layer: "<<dim<<endl;
     assert(dim.second == 1);
 
     // get filter
@@ -930,7 +932,8 @@ void ConstructLayer::UpdateCoordsForActiveNeuronFC()
     for(size_t i=0;i<dim.first;i++)
     {
 	// first reset coords back
-	__neurons[0][i][0]->SetCoord(0, i, 0);
+	//__neurons[0][i][0]->SetCoord(0, i, 0); //SetCoord(i, j, k), please note the sequence of the coordinates
+	__neurons[0][i][0]->SetCoord(i, 0, 0);   //SetCoord(i, j, k), 
 
 	// then set coord according to filter mask
 	if(!__activeFlag[0][i][0]){
@@ -938,7 +941,8 @@ void ConstructLayer::UpdateCoordsForActiveNeuronFC()
 	    continue;
 	}
 	__neurons[0][i][0]->Enable();
-	__neurons[0][i][0]->SetCoord(0, active_i, 0);
+	//__neurons[0][i][0]->SetCoord(0, active_i, 0);
+	__neurons[0][i][0]->SetCoord(active_i, 0, 0); // SetCoord(i, j, k)
 	active_i++;
     }
 }
@@ -1384,6 +1388,31 @@ DataInterface * ConstructLayer::GetDataInterface()
     }
     return __p_data_interface;
 }
+
+Layer* ConstructLayer::GetNextLayer()
+{
+    if(__nextLayer == nullptr)
+    {
+        std::cout<<"Error: ConstructLayer::GetNextLayer(): __nextLayer is not setup"
+	         <<std::endl;
+	exit(0);
+    }
+    return __nextLayer;
+}
+
+
+Layer* ConstructLayer::GetPrevLayer()
+{
+    if(__prevLayer == nullptr)
+    {
+        std::cout<<"Error: ConstructLayer::GetNextLayer(): __prevLayer is not setup"
+	         <<std::endl;
+	exit(0);
+    }
+
+    return __prevLayer;
+}
+
 
 void ConstructLayer::UpdateWeightsAndBias()
 {

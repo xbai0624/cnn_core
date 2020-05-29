@@ -133,8 +133,12 @@ public:
     static std::vector<Matrix> DispatchMatrix(Matrix&, size_t, size_t);
     // concatenate two matrix in i direction / vertically
     static Matrix ConcatenateMatrixByI(Matrix &, Matrix &);
+    // concatenate a vector of matrix in i direction / vertically
+    static Matrix ConcatenateMatrixByI(std::vector<Matrix> &);
     // concatenate two matrix in j direction / horizontally
     static Matrix ConcatenateMatrixByJ(Matrix &, Matrix &);
+    // concatenate a vector of matrix in j direction / horizontally
+    static Matrix ConcatenateMatrixByJ(std::vector<Matrix> &);
     // Get element (i, j) of the correlated matrix, A is input, B is kernel
     static float GetCorrelationValue(Matrix &A, Matrix &B, size_t i, size_t j);
     // Get element (i, j) of the convoluted matrix, A is input, B is kernel

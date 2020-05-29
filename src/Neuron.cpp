@@ -110,17 +110,17 @@ void Neuron::SetLayer(Layer* l)
     __layer = l;
 }
 
-void Neuron::SetPreviousLayer(Layer* l)
-{
+//void Neuron::SetPreviousLayer(Layer* l)
+//{
     // set neuron's prevous layer
-    __previousLayer = l;
-}
+    //__previousLayer = l;
+//}
 
-void Neuron::SetNextLayer(Layer* l)
-{
+//void Neuron::SetNextLayer(Layer* l)
+//{
     // set neurons's next layer
-    __nextLayer = l;
-}
+    //__nextLayer = l;
+//}
 
 void Neuron::SetActuationFuncType(ActuationFuncType t)
 {
@@ -158,6 +158,7 @@ void Neuron::UpdateZFC(int sample_index)
     // for fully connected layer, matrix reform are done by Layer class
     // currently layer and its previous layer are fully connected
     // weight matrix dimension will be: (1, M)
+    Layer* __previousLayer = __layer->GetPrevLayer();
     auto _t = __previousLayer -> GetImagesA();
     //cout<<"batch size: "<<_t.size()<<endl;
     //cout<<"kernel number: "<<_t[0].GetNumberOfKernels()<<endl;
@@ -201,6 +202,7 @@ void Neuron::UpdateZCNN(int sample_index)
 {
     // cnn layer
     // every single output image needs input from all input images
+    Layer *__previousLayer = __layer->GetPrevLayer();
     auto inputImage = __previousLayer->GetImagesA();
     auto w_dim = __w->Dimension();
     int stride = __layer->GetCNNStride();
@@ -238,6 +240,7 @@ void Neuron::UpdateZPooling(int sample_index)
 {
     // pooling layer
     // should be with cnn layer, just kernel matrix all elements=1, bias = 0;
+    Layer* __previousLayer = __layer->GetPrevLayer();
     auto inputImage = __previousLayer->GetImagesA();
     //if(inputImage.back().OutputImageFromKernel.size() < __coord.k)
     if(inputImage[sample_index].OutputImageFromKernel.size() < __coord.k)
@@ -400,20 +403,30 @@ void Neuron::UpdateDeltaOutputLayer(int sample_index)
     auto dim = labels[0].Dimension(); // dim.first is neuron row number, dim.second is neuron collum number
     assert(__coord.i < dim.first);
     assert(dim.second == 1);
-    assert(__coord.j == 1);
+    //cout<<"neuron coord: "<<__coord<<endl;
+    //assert(__coord.j == 0);
+
+    //cout<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"<<endl;
+    //cout<<"sample index: "<<sample_index<<endl;
+    //cout<<"neuron id: "<<__neuron_id<<endl;
+    //Print();
 
     auto cost_func_type = __layer->GetCostFuncType(); // for $\partial C over \partial a$
 
     // label for current sample
     Matrix label_for_current_sample = labels[sample_index]; 
+    //cout<<label_for_current_sample<<endl;
     // expected value for current sample current neuron
     float y_i = label_for_current_sample[__coord.i][0];
+    //cout<<"---"<<y_i<<endl;
 
     // a value for current sample
     float a_i = __a[sample_index];
+    //cout<<a_i<<endl;
 
     // sigma^\prime for current sample
     float sigma_prime_i = __sigmaPrime[sample_index];
+    //cout<<"---"<<sigma_prime_i<<endl;
 
     // solve for dC/da, which is dependent on the type of cost function
     float dc_over_da = 0;
@@ -429,9 +442,11 @@ void Neuron::UpdateDeltaOutputLayer(int sample_index)
 
     // delta for current sample current neuron
     float delta = dc_over_da * sigma_prime_i; 
+    //cout<<"---"<<delta<<endl;
 
     // save delta for this batch this neuron
     __delta[sample_index] = delta;
+    //cout<<"here..."<<endl;
 }
 
 
@@ -441,11 +456,15 @@ void Neuron::UpdateDeltaFC(int sample_index)
     if(__sigmaPrime.size() <= 0) 
     {
 	std::cout<<"Error: Neuron::UpdateDeltaFC() computing delta needs sigma^prime computed first."<<std::endl;
-	std::cout<<"        "<<__delta.size()<<" deltas, "<<__sigmaPrime.size()<<" sigma^primes"<<endl;
+	std::cout<<"        "<<__delta.size()<<" deltas, "<<__sigmaPrime.size()<<" sigma^primes"<<std::endl;
 	exit(0);
     }
+    //cout<<"here..... Neuron::UpdateDeltaFC()"<<endl;
+
+    Layer* __nextLayer = __layer->GetNextLayer();
 
     auto __deltaNext = __nextLayer->GetImagesDelta();
+    //cout<<"delta images batch size: "<<__deltaNext.size()<<endl;
     Images image_delta_Next = __deltaNext[sample_index]; // get current sample delta
     std::vector<Matrix> &deltaNext = image_delta_Next.OutputImageFromKernel;
     if( deltaNext.size() != 1 ) 
@@ -454,17 +473,27 @@ void Neuron::UpdateDeltaFC(int sample_index)
 	exit(0);
     }
     Matrix delta = deltaNext[0];
+    //cout<<delta<<endl;
+
+    //cout<<"sample id: "<<sample_index<<endl;
 
     auto wv = __nextLayer->GetWeightMatrix();
-    if( wv->size() != 1 ) 
+    // 1) method 1
+    Matrix w = Matrix::ConcatenateMatrixByI(*wv);
+
+    auto w_dim = w.Dimension();
+    if( w_dim.second < __coord.i ) 
     {
 	std::cout<<"Error: weight matrix dimension not match in FC layer"<<std::endl;
+	std::cout<<"Number of kernels: "<<wv->size()<<std::endl;
+	std::cout<<"Neuron coord: "<<__coord<<std::endl;
 	exit(0);
     }
-    Matrix w = (*wv)[0];
 
     // back propogate delta
     w = w.Transpose();
+
+    //cout<<w<<endl;
     auto dim = w.Dimension();
     w = w.GetSection(__coord.i, __coord.i+1, 0, dim.second);
 
@@ -482,6 +511,8 @@ void Neuron::UpdateDeltaFC(int sample_index)
     v = v*s_prime;
 
     __delta[sample_index] = v;
+
+    //cout<<"here..... Neuron::UpdateDeltaFC()   end"<<endl;
 }
 
 void Neuron::UpdateDeltaCNN(int sample_index)
@@ -493,6 +524,8 @@ void Neuron::UpdateDeltaCNN(int sample_index)
 	exit(0);
     }
     double _sigma_prime = __sigmaPrime[sample_index];
+
+    Layer* __nextLayer = __layer->GetNextLayer();
 
     auto deltaVecNext = __nextLayer->GetImagesDelta();
     auto weightVecNext = __nextLayer->GetWeightMatrix();
@@ -547,6 +580,8 @@ void Neuron::UpdateDeltaPooling(int sample_index)
 	std::cout<<"       a matrix should be already calculated."<<std::endl;
 	exit(0);
     }
+
+    Layer* __nextLayer = __layer->GetNextLayer();
 
     auto deltaNext = __nextLayer->GetImagesDelta();
     Images & delta_image_for_current_sample = deltaNext[sample_index]; // delta image for current sample
@@ -672,4 +707,6 @@ void Neuron::Print()
     std::cout<<(*__w);
     std::cout<<"bias: "<<std::endl;
     std::cout<<(*__b);
+    std::cout<<"Neruon Coord: "<<endl;
+    std::cout<<__coord<<endl;
 }

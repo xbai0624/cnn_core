@@ -52,8 +52,8 @@ public:
     virtual void SetPoolingMethod(PoolingMethod);
     virtual void SetCNNStride(int);
     virtual void SetDropOutFactor(float);
-    virtual void SetPrevLayer(Layer *);
-    virtual void SetNextLayer(Layer *);
+    virtual void SetPrevLayer(Layer *); // pass pointer by reference
+    virtual void SetNextLayer(Layer *); // pass pointer by reference
     virtual void SetCostFuncType(CostFuncType t);
 
     //
@@ -137,6 +137,8 @@ public:
     virtual int GetBatchSize();
     virtual CostFuncType GetCostFuncType();
     virtual DataInterface * GetDataInterface();
+    virtual Layer* GetNextLayer();
+    virtual Layer* GetPrevLayer();
 
 private:
     // 1):
@@ -186,6 +188,9 @@ private:
     // for fc layer, each matrix in this vector corresponds to a row of the original w&b, for easier to assign them to neurons
     std::vector<Matrix> __weightMatrixActive;
     std::vector<Matrix> __biasVectorActive;
+    // for fc layer: add one more matrix form for all active weights and bias
+    Matrix __weightMatrixActive_matrix_form_fc;
+    Matrix __biasVectorActive_matrix_form_fc;
 
     // 4):
     // this 3D matrix filters out active neurons for FC, active weight matrix element for CNN

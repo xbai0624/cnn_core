@@ -4,6 +4,7 @@
 #include <random>
 #include <thread>
 #include <mutex>
+#include <cassert>
 
 bool operator==(std::pair<size_t, size_t> left, std::pair<size_t, size_t> right)
 {
@@ -786,6 +787,27 @@ Matrix Matrix::ConcatenateMatrixByI(Matrix &A, Matrix &B)
     return C;
 }
 
+
+Matrix Matrix::ConcatenateMatrixByI(std::vector<Matrix> &A)
+{
+    // vertially place a vector of matrix together, 
+    Matrix C = A[0];
+
+    for(size_t i=1;i<A.size();i++)
+    {
+        auto dimAI = A[i].Dimension();
+        for(size_t ii=0;ii<dimAI.first;ii++)
+	{
+	    auto dimC = C.Dimension();
+	    assert(dimC.second == dimAI.second);
+	    C.InsertRow(dimC.first, &A[i][ii]);
+	}
+    }
+
+    return C;
+}
+
+
 Matrix Matrix::ConcatenateMatrixByJ(Matrix &A, Matrix &B)
 {
     // horizontally place two matrix together, 
@@ -809,6 +831,18 @@ Matrix Matrix::ConcatenateMatrixByJ(Matrix &A, Matrix &B)
     }
     return C;
 }
+
+
+Matrix Matrix::ConcatenateMatrixByJ(std::vector<Matrix> &A)
+{
+    // vertially place a vector of matrix together, 
+    Matrix C = A[0];
+
+    // to be implemented
+
+    return C;
+}
+
 
 float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
 {
