@@ -1536,7 +1536,20 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
     //cout<<__func__<<" started."<<endl;
     // after finishing one batch, update weights and bias, for FC layer
     // get output from previous layer for current training sample
-    auto a_images = __prevLayer->GetImagesFullA(); // a images from previous layer
+    vector<Images> a_images;
+    if(__prevLayer->GetType() != LayerType::input && __prevLayer->GetType() != LayerType::fullyConnected)
+    {
+        // if previous layer is not an input/fullyConnected layer, then Vectorization operation is needed
+	//      this is for cnn->fc or pooling->fc
+        auto _tmp = __prevLayer->GetImagesFullA(); // 'a' images from previous layer
+	for(auto &i: _tmp)
+	    a_images.push_back(i.Vectorization());
+    }
+    else
+    {
+        // if previous layer is input/fc, no other operation is needed
+	a_images = __prevLayer->GetImagesFullA(); // 'a' images from previous layer
+    }
     auto d_images = this->GetImagesFullDelta(); // delta images from current layer
     // NOTE: 'a' and 'delta' include value correpsonds to disabled neurons
     //       it's just these values have been set to 0 when updating __imagesA, __imagesDelta
@@ -1753,6 +1766,9 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
     // So one need to loop for kernels
 
     // get 'a' matrix from previous layer for current training sample
+    //         !!! cnn->fc connection is allowed, however, 
+    //         !!1 fc->cnn connection is not implemented for the moment
+    //         !!! so no vectorization or tensorization is needed here
     auto aVec = __prevLayer -> GetImagesFullA();
     // get 'delta' matrix for current layer
     auto deltaVec = this -> GetImagesFullDelta();

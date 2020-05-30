@@ -41,6 +41,11 @@ void UnitTest::TestImagesStruct()
     for(auto &i: __images.OutputImageFromKernel)
         cout<<i<<endl<<endl;
 
+    // 2-1) test copy
+    cout<<"test copy."<<endl;
+    Images c_image = __images;
+    for(auto &i: c_image.OutputImageFromKernel)
+        cout<<i<<endl<<endl;
     Images v_image = __images.Vectorization();
     for(auto &i: v_image.OutputImageFromKernel)
         cout<<i<<endl<<endl;

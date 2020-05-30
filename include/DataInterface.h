@@ -2,6 +2,8 @@
 #define DATA_INTERFACE_H
 
 #include "Matrix.h"
+#include "Layer.h"
+
 #include <vector>
 
 class DataInterface

@@ -159,7 +159,20 @@ void Neuron::UpdateZFC(int sample_index)
     // currently layer and its previous layer are fully connected
     // weight matrix dimension will be: (1, M)
     Layer* __previousLayer = __layer->GetPrevLayer();
-    auto _t = __previousLayer -> GetImagesActiveA();
+    std::vector<Images> _t ;
+    if(__previousLayer->GetType() != LayerType::fullyConnected && __previousLayer->GetType() != LayerType::input)
+    { 
+	// need vectorization 2D->1D
+        auto tmp_v = __previousLayer->GetImagesActiveA();
+	for(auto &i: tmp_v)
+	{
+	    _t.push_back(i.Vectorization());
+	}
+    }
+    else {
+	_t = __previousLayer -> GetImagesActiveA();
+    }
+
     //cout<<"batch size: "<<_t.size()<<endl;
     //cout<<"kernel number: "<<_t[0].GetNumberOfKernels()<<endl;
     //cout<<" image dimension: "<<_t[0].OutputImageFromKernel[0].Dimension()<<endl;
@@ -203,7 +216,7 @@ void Neuron::UpdateZCNN(int sample_index)
     // cnn layer
     // every single output image needs input from all input images
     Layer *__previousLayer = __layer->GetPrevLayer();
-    auto inputImage = __previousLayer->GetImagesActiveA();
+    auto inputImage = __previousLayer->GetImagesActiveA(); // no tensorization needed; b/c "fc->cnn" type connection is not used at the moment
     auto w_dim = __w->Dimension();
     int stride = __layer->GetCNNStride();
 
@@ -241,7 +254,7 @@ void Neuron::UpdateZPooling(int sample_index)
     // pooling layer
     // should be with cnn layer, just kernel matrix all elements=1, bias = 0;
     Layer* __previousLayer = __layer->GetPrevLayer();
-    auto inputImage = __previousLayer->GetImagesActiveA();
+    auto inputImage = __previousLayer->GetImagesActiveA(); // no tensorization needed, b/c "fc->pooling" type connection is not used at the moment
     //if(inputImage.back().OutputImageFromKernel.size() < __coord.k)
     if(inputImage[sample_index].OutputImageFromKernel.size() < __coord.k)
     {
@@ -474,7 +487,7 @@ void Neuron::UpdateDeltaFC(int sample_index)
 
     Layer* __nextLayer = __layer->GetNextLayer();
 
-    auto __deltaNext = __nextLayer->GetImagesActiveDelta();
+    auto __deltaNext = __nextLayer->GetImagesActiveDelta(); // no vectorization needed, b/c "fc->cnn" type connection is not used
     //cout<<"delta images batch size: "<<__deltaNext.size()<<endl;
     Images image_delta_Next = __deltaNext[sample_index]; // get current sample delta
     std::vector<Matrix> &deltaNext = image_delta_Next.OutputImageFromKernel;
@@ -538,7 +551,23 @@ void Neuron::UpdateDeltaCNN(int sample_index)
 
     Layer* __nextLayer = __layer->GetNextLayer();
 
-    auto deltaVecNext = __nextLayer->GetImagesActiveDelta();
+    std::vector<Images> deltaVecNext;
+    auto output_image_size_for_current_layer = __layer->GetOutputImageSize();
+    if(__nextLayer->GetType() != LayerType::cnn && __nextLayer->GetType() != LayerType::pooling)
+    {
+        // next layer is a 1D layer, needs tensorization for back propagation
+        auto delta_from_next_layer = __nextLayer->GetImagesActiveDelta();
+	for(auto &i: delta_from_next_layer)
+	{
+	    deltaVecNext.push_back(i.Tensorization(output_image_size_for_current_layer.first, output_image_size_for_current_layer.second));
+	}
+    }
+    else
+    {
+        // next layer is a 2D layer, no extra operation needed
+	deltaVecNext = __nextLayer->GetImagesActiveDelta();
+    }
+
     auto weightVecNext = __nextLayer->GetWeightMatrix();
 
     Images &image_next_layer = deltaVecNext[sample_index]; // delta for current training sample
@@ -594,7 +623,30 @@ void Neuron::UpdateDeltaPooling(int sample_index)
 
     Layer* __nextLayer = __layer->GetNextLayer();
 
-    auto deltaNext = __nextLayer->GetImagesActiveDelta();
+    // get delta images from its next layer
+    std::vector<Images> deltaNext;
+    auto outputImageSizeForCurrentLayer = __layer->GetOutputImageSize();
+    auto tensorization = [&](std::vector<Images>& data_from_next_layer)->std::vector<Images>
+    {
+        // tensorization for vector of Images
+        std::vector<Images> Ret;
+	for(auto &i: data_from_next_layer)
+	{
+	    Ret.push_back(i.Tensorization(outputImageSizeForCurrentLayer.first, outputImageSizeForCurrentLayer.second));
+	}
+	return Ret;
+    };
+    if(__nextLayer->GetType() != LayerType::cnn && __nextLayer->GetType() != LayerType::pooling)
+    {
+        //  if next layer is not cnn or pooling (2D), then tensorization is needed for back propagation
+        auto tmp =  __nextLayer->GetImagesActiveDelta();
+	deltaNext = tensorization(tmp);
+    }
+    else
+    {
+	deltaNext = __nextLayer->GetImagesActiveDelta();
+    }
+
     Images & delta_image_for_current_sample = deltaNext[sample_index]; // delta image for current sample
     std::vector<Matrix> &deltaImages = delta_image_for_current_sample.OutputImageFromKernel; // matrix
 
