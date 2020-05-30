@@ -1353,6 +1353,8 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 void ConstructLayer::UpdateImageForCurrentTrainingSample()
 {
     // loop for all neurons
+    // not used
+    // instead implemented in Network class
 }
 
 void ConstructLayer::ClearImage()
@@ -1364,6 +1366,9 @@ void ConstructLayer::ClearImage()
     __imageAFull.clear();
     __imageZFull.clear();
     __imageDeltaFull.clear();
+
+    __wGradient.clear();
+    __bGradient.clear();
 
 }
 

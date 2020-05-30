@@ -11,6 +11,7 @@
 #include <utility>
 //#include <ostream>
 #include <cassert>
+//#include <iostream>
 #include "Matrix.h"
 
 // necessary data structures for layer/neuron class
@@ -122,7 +123,6 @@ struct NeuronCoord
 };
 std::ostream & operator<<(std::ostream&, const NeuronCoord &c);
 
-
 // a struct holding layer output image of one single training sample
 // so each batch will have a vector of this (Images) struct
 struct Images
@@ -143,6 +143,7 @@ struct Images
     Images ReshapeKernels(size_t I, size_t J)
     {
         // reshape matrix from different kernels
+	assert(OutputImageFromKernel.size() > 0);
 	Images res;
         for(auto &i: OutputImageFromKernel)	
 	{
@@ -159,6 +160,7 @@ struct Images
         // combine outputs from all kernels into a one-collum matrix
 	// this is for feedforward from 2D layer to 1D layer 
 	//     (2D layer can have multiple kernels, 1D layer should only have 1 "kernel");
+	assert(OutputImageFromKernel.size() > 0);
         auto dim = OutputImageFromKernel[0].Dimension();
 	Images tmp = ReshapeKernels(dim.first*dim.second, 1);
 	Matrix large_vector = Matrix::ConcatenateMatrixByI(tmp.OutputImageFromKernel);
@@ -181,10 +183,10 @@ struct Images
 
 	int nKernels = dim.first/unit_quantity;
 	Images Ret;
-	for(int i=0;i<nKernels;i++)
+	for(size_t i=0;i<(size_t)nKernels;i++)
 	{
-	    Matrix tmp = tmp.GetSection(i*nKernels, (i+1)*nKernels, 0, 1);
-	    Matrix _t = tmp.Reshape(I, J);
+	    Matrix _tmp = tmp.GetSection(i*unit_quantity, (i+1)*unit_quantity, 0, 1);
+	    Matrix _t = _tmp.Reshape(I, J);
 	    Ret.OutputImageFromKernel.push_back(_t);
 	}
 	return Ret;
