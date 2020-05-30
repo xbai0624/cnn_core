@@ -210,7 +210,6 @@ private:
     std::vector<Images> __imageAFull;
     std::vector<Images> __imageZFull;
     std::vector<Images> __imageDeltaFull;
-    //std::vector<Images> __imageSigmaPrime;
     std::vector<double> __outputLayerCost;
 
     // 6):

@@ -121,8 +121,10 @@ void ConstructLayer::BatchInit()
     __imageAFull.resize(batch_size);
     __imageZFull.resize(batch_size);
     __imageDeltaFull.resize(batch_size);
-    //__imageSigmaPrime.resize(batch_size);
     __outputLayerCost.resize(batch_size);
+
+    __wGradient.clear(); // these two needs to be cleared, not resized
+    __bGradient.clear(); // these two needs to be cleared, not resized
 
     // clear training information from last batch for neurons inside this layer
     for(auto &pixel_2d: __neurons)
@@ -1481,7 +1483,7 @@ void ConstructLayer::UpdateWeightsAndBias()
     // 2) then update weights and bias
     auto layerType = this->GetType();
 
-    if(layerType == LayerType::fullyConnected) 
+    if(layerType == LayerType::fullyConnected || layerType == LayerType::output)  // output is also a fc layer
     {
 	UpdateWeightsAndBiasFC();
     }
@@ -1495,7 +1497,7 @@ void ConstructLayer::UpdateWeightsAndBias()
     }
     else 
     {
-	std::cout<<"Error: update weights and bias, unsupported layer type."<<std::endl;
+	std::cout<<__func__<<" Error: update weights and bias, unsupported layer type."<<std::endl;
 	exit(0);
     }
 }
@@ -1505,7 +1507,7 @@ void ConstructLayer::UpdateWeightsAndBiasGradients()
     // after finishing one training batch, update weights and bias gradients
     auto layerType = this->GetType();
 
-    if(layerType == LayerType::fullyConnected) 
+    if(layerType == LayerType::fullyConnected || layerType == LayerType::output)  // output is also a fully connected layer
     {
 	UpdateWeightsAndBiasGradientsFC();
     }
@@ -1519,7 +1521,7 @@ void ConstructLayer::UpdateWeightsAndBiasGradients()
     }
     else 
     {
-	std::cout<<"Error: update weights and bias gradients, unsupported layer type."<<std::endl;
+	std::cout<<__func__<<" Error: update weights and bias gradients, unsupported layer type."<<std::endl;
 	exit(0);
     }
 }
@@ -1536,19 +1538,19 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
     //       see Functions UpdateImagesA() and UpdateImagesDelta()
     //       since dC/dw_ij = a^{l-1}_j * delta^l_k, so if a = 0 or delta = 0, then dC/dw = 0, namely no change on w for inactive neurons
     if(a_images.size() != d_images.size()) {
-	std::cout<<"Error: batch size not equal..."<<std::endl;
+	std::cout<<__func__<<" Error: batch size not equal..."<<std::endl;
 	exit(0);
     }
     if(a_images.back().OutputImageFromKernel.size() != 1 ) {
-	std::cout<<"Error: updating weights and bias gradients for FC, dimension not match."<<std::endl;
-	std::cout<<"       kernel size: "<<a_images.back().OutputImageFromKernel.size()<<std::endl;
+	std::cout<<__func__<<" Error: updating weights and bias gradients for FC, dimension not match."<<std::endl;
+	std::cout<<"                  kernel size: "<<a_images.back().OutputImageFromKernel.size()<<std::endl;
 	exit(0);
     }
 
     // so directly work on __weightMatrix, not __weightMatrixActive
     // check layer type
     if(__weightMatrix.size() != 1) {
-	std::cout<<"Error: more than 1 weight matrix exist in fully connected layer."<<std::endl;
+	std::cout<<__func__<<" Error: more than 1 weight matrix exist in fully connected layer."<<std::endl;
 	exit(0);
     }
 
@@ -1567,10 +1569,10 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
 	auto d1 = (__weightMatrix[0]).Dimension(), d2 = a_matrix.Dimension(), d3 = d_matrix.Dimension();
 	if(d1.first != d3.first || d1.second != d2.first)
 	{
-	    std::cout<<"Error: updating weights and bias gradients for FC, dimension not match."<<std::endl;
-	    std::cout<<"       current layer 'w' matrix dimension: "<<d1<<std::endl;
-	    std::cout<<"       previous layer 'a' matrix dimension: "<<d2<<std::endl;
-	    std::cout<<"       current layer 'delta' matrix dimension: "<<d3<<std::endl;
+	    std::cout<<__func__<<"Error: updating weights and bias gradients for FC, dimension not match."<<std::endl;
+	    std::cout<<"          current layer 'w' matrix dimension: "<<d1<<std::endl;
+	    std::cout<<"          previous layer 'a' matrix dimension: "<<d2<<std::endl;
+	    std::cout<<"          current layer 'delta' matrix dimension: "<<d3<<std::endl;
 	    exit(0);
 	}
 
@@ -1599,6 +1601,8 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
     //cout<<"INFO: "<<__func__<<" finished."<<endl;
 } 
 
+/* ***************************************************************
+// not used. Using Matrix hadamard multiply operation instead
 static void maskMatrix(Matrix& M, Matrix& F)
 {
     // set all inactive elements to 0
@@ -1615,27 +1619,29 @@ static void maskMatrix(Matrix& M, Matrix& F)
 	}
     }
 }
+*/
 
 void ConstructLayer::UpdateWeightsAndBiasFC()
 {
-    cout<<__func__<<" started..."<<endl;
+    //cout<<__func__<<" started..."<<endl;
     // after finishing one batch, update weights and bias, for FC layer
     size_t M = __imageDeltaFull.size(); // batch size
     if( M != __wGradient.size() ) {
-	std::cout<<"Error: update FC weights, batch size not match."<<std::endl;
-	std::cout<<"weight gradient size: "<<__wGradient.size()<<endl;
+	std::cout<<__func__<<" Error: update FC weights, batch size not match."<<std::endl;
+	std::cout<<"           weight gradient batch size: "<<__wGradient.size()<<endl;
+	std::cout<<"           delta image batch size: "<<__imageDeltaFull.size()<<endl;
 	exit(0);
     }
     if( __wGradient[0].OutputImageFromKernel.size() != 1 || __bGradient[0].OutputImageFromKernel.size()!=1) 
     {
-	std::cout<<"Error: update FC weiths, more than 1 w gradient matrix found."
+	std::cout<<__func__<<" Error: update FC weiths, more than 1 w gradient matrix found."
 	    <<std::endl;
 	exit(0);
     }
 
     // gradient descent
     if(__weightMatrix.size() != __neuronDim.k) {
-	std::cout<<"Error: update FC layer weights, more than 1 weight matrix found."<<std::endl;
+	std::cout<<__func__<<" Error: update FC layer weights, more than 1 weight matrix found."<<std::endl;
 	std::cout<<"__weightMatrix size: "<<__weightMatrix.size()<<std::endl;
 	std::cout<<"neuron dimension: "<<__neuronDim<<std::endl;
 	exit(0);
@@ -1650,7 +1656,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     dw = dw * float(__learningRate/(double)M); // over batch 
     //cout<<"learning rate: "<<float(__learningRate/(double)M)<<endl;
 
-    // Get filter Matrix for masking Regularization
+    // Get filter Matrix for masking Regularization item
     assert(__activeFlag.size() == 1);
     auto convertFilterToMatrix = [&](Filter2D & F) -> Matrix
     {
@@ -1666,33 +1672,60 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
 	return M;
     };
     Matrix currentLayerFilter = convertFilterToMatrix(__activeFlag[0]);
+    //cout<<currentLayerFilter.Dimension()<<endl;
     Matrix prevLayerFilter(1, dw.Dimension().second, 1);
-    cout<<prevLayerFilter<<endl;
-    cout<<dw<<endl;
-    getchar();
+    //cout<<"before: "<<endl<<prevLayerFilter<<endl;
 
+    if(__prevLayer->GetType() == LayerType::input) // only fc layer, other layers won't affect
+    {
+	auto prevLayerFilters = __prevLayer->GetActiveFlag();
+	assert(prevLayerFilter.size() == 1);
+
+	Matrix filter = convertFilterToMatrix(prevLayerFilters[0]);
+	prevLayerFilter = filter.Transpose();
+	//cout<<"after: "<<endl<<prevLayerFilter<<endl;
+    }
+
+    // following is two flag matrix (dim[n,1] x dim[1, m], with bool elements) product
+    // all the elements of the product will be either 0 or 1
+    // this product can be used to mask out disabled elements in weight matrix regularization
+    Matrix F = currentLayerFilter * prevLayerFilter;
+    //cout<<F<<endl;
+    //cout<<prevLayerFilter<<endl;
+    //cout<<dw<<endl;
+    //getchar();
+
+    assert(F.Dimension() == (__weightMatrix[0]).Dimension());
     // Regularization
-    double f_regularization = 0.;
+    //double f_regularization = 0.;
     if(__regularizationMethod == Regularization::L2) 
     {
-	f_regularization = 1 - __learningRate * __regularizationParameter / M;
-	(__weightMatrix[0]) = (__weightMatrix[0]) * f_regularization - dw;
+        // obsolete
+	//f_regularization = 1 - __learningRate * __regularizationParameter / M;
+	//(__weightMatrix[0]) = (__weightMatrix[0]) * f_regularization - dw;
+	
+	// new
+	// hadamard multiply with F to maks out all inactive elements
+	Matrix regularization_M = (__weightMatrix[0]^F) *(__learningRate * __regularizationParameter/((float)M)); 
+	Matrix total_correction_M = regularization_M + dw; // dw already include learning rate during generation
+	__weightMatrix[0] = __weightMatrix[0] - total_correction_M;
     } 
     else if(__regularizationMethod == Regularization::L1) 
     {
 	Matrix _t = (__weightMatrix[0]); // make a copy of weight matrix
 	_t(&SGN); // get the sign for each element in weight matrix
+	_t = _t^F; // hadamard operation to mask out all inactive elements
 	_t = _t * (__learningRate*__regularizationParameter/(double)M); // L1 regularization part
 	(__weightMatrix[0]) = (__weightMatrix[0]) -  _t; // apply L1 regularization to weight matrix
 	(__weightMatrix[0]) = (__weightMatrix[0]) - dw; // apply gradient decsent part
     } 
     else 
     {
-	std::cout<<"Error: update FC weights, unsupported regularization."<<std::endl;
+	std::cout<<__func__<<" Error: update FC weights, unsupported regularization."<<std::endl;
 	exit(0);
     }
 
-    cout<<"reached hrere..."<<endl;
+    //cout<<"reached hrere..."<<endl;
 
     // bias
     Matrix db(__biasVector[0].Dimension());
@@ -1703,7 +1736,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     db = db * __learningRate;
     __biasVector[0] = __biasVector[0] - db;
 
-    cout<<__func__<<" ended.."<<endl;
+    //cout<<__func__<<" ended.."<<endl;
 }
 
 void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()

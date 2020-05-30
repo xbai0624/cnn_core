@@ -24,8 +24,8 @@ bool operator!=(std::pair<size_t, size_t> left, std::pair<size_t, size_t> right)
 
 std::ostream &operator<<(std::ostream &os, const std::pair<size_t, size_t> &d)
 {
-    os<<std::setfill(' ')<<std::setw(8)<<std::scientific<<d.first
-        <<std::setfill(' ')<<std::setw(8)<<std::scientific<<d.second
+    os<<std::setfill(' ')<<std::setw(6)<<d.first
+        <<std::setfill(' ')<<std::setw(6)<<d.second
         <<std::endl;
     return os;
 }
@@ -470,7 +470,7 @@ std::ostream& operator<<(std::ostream &os, std::vector<float>& A)
 {
     // overload cout for vector
     for(size_t i=0;i<A.size();i++){
-	os<<std::setfill(' ')<<std::setw(12)<<A[i];
+	os<<std::setfill(' ')<<std::setw(20)<<std::setprecision(8)<<A[i];
     }
     std::cout<<std::endl;
     return os;
