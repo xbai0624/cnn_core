@@ -10,7 +10,7 @@
 #include <cstddef> // size_t
 #include <utility>
 //#include <ostream>
-
+#include <cassert>
 #include "Matrix.h"
 
 // necessary data structures for layer/neuron class
@@ -138,6 +138,56 @@ struct Images
         // for cnn layer, this returns number of kernels
         // for mlp layer, this should return 1
         return OutputImageFromKernel.size();
+    }
+
+    Images ReshapeKernels(size_t I, size_t J)
+    {
+        // reshape matrix from different kernels
+	Images res;
+        for(auto &i: OutputImageFromKernel)	
+	{
+	    auto dim = i.Dimension();
+	    assert(dim.first * dim.second == I * J);
+	    Matrix tmp = i.Reshape(I, J);
+	    res.OutputImageFromKernel.push_back(tmp);
+	}
+	return res;
+    }
+
+    Images Vectorization()
+    {
+        // combine outputs from all kernels into a one-collum matrix
+	// this is for feedforward from 2D layer to 1D layer 
+	//     (2D layer can have multiple kernels, 1D layer should only have 1 "kernel");
+        auto dim = OutputImageFromKernel[0].Dimension();
+	Images tmp = ReshapeKernels(dim.first*dim.second, 1);
+	Matrix large_vector = Matrix::ConcatenateMatrixByI(tmp.OutputImageFromKernel);
+	tmp.OutputImageFromKernel.clear();
+	tmp.OutputImageFromKernel.push_back(large_vector);
+	return tmp;
+    }
+
+    Images Tensorization(size_t I, size_t J)
+    {
+        // this is the inverse operation for vectorization
+	// used for backward propagation, 1D layer to 2D layer
+	//     [I J] is the dimension of tensorized kernel matrix
+        assert(OutputImageFromKernel.size() == 1); // make sure this is from 1D layer (only one kernel)
+	Matrix tmp = OutputImageFromKernel[0];
+	auto dim = tmp.Dimension();
+	assert(dim.second == 1); // make sure it is a one-collumn matrix
+	size_t unit_quantity = I * J; //  number of elements in each tensorized kernel
+	assert(dim.first%unit_quantity == 0);
+
+	int nKernels = dim.first/unit_quantity;
+	Images Ret;
+	for(int i=0;i<nKernels;i++)
+	{
+	    Matrix tmp = tmp.GetSection(i*nKernels, (i+1)*nKernels, 0, 1);
+	    Matrix _t = tmp.Reshape(I, J);
+	    Ret.OutputImageFromKernel.push_back(_t);
+	}
+	return Ret;
     }
 };
 
