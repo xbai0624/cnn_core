@@ -42,7 +42,7 @@ void Network::ConstructLayers()
     // 3) input layer
     layer_input = new ConstructLayer(LayerType::input, LayerDimension::_1D);
     // NOTE: a data_interface class pointer must be passed to input layer before calling input_layer->Init() function
-    //       because Init rely on data_interface
+    //       because Initialization rely on data_interface
     layer_input -> PassDataInterface(data_interface);
     layer_input->Init();
     cout<<"input layer test finished..."<<endl;
@@ -50,7 +50,7 @@ void Network::ConstructLayers()
     // 4) middle layer
     l0 = new ConstructLayer(LayerType::fullyConnected, 20);
     l0->SetPrevLayer(layer_input);
-    l0->SetNextLayer(layer_output);
+    //l0->SetNextLayer(layer_output);
     l0->PassDataInterface(data_interface); // now all layers need data_interface pointer
     l0->Init();
     //l0->EpochInit();
