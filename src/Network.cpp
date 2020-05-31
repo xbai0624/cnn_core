@@ -40,7 +40,7 @@ void Network::ConstructLayers()
     Layer *layer_input = nullptr, *l0 = nullptr, *layer_output = nullptr;
 
     // 3) input layer
-    layer_input = new ConstructLayer(LayerType::input);
+    layer_input = new ConstructLayer(LayerType::input, LayerDimension::_1D);
     // NOTE: a data_interface class pointer must be passed to input layer before calling input_layer->Init() function
     //       because Init rely on data_interface
     layer_input -> PassDataInterface(data_interface);
@@ -142,10 +142,10 @@ void Network::ForwardPropagateForBatch()
 
 	// after finished training, clear used samples in input layer
 	// 1)
-	// this is necessary; because program aways fetch the last sample in "__imageA" from InputLayer
+	// this is necessary; b/c program aways fetch the last sample in "__imageA" from InputLayer
 	//                ---- so one need to pop_back() the used sample
 	// 2)
-	// not needed anymore; because changed from "dynamic increase" to "fixed length"
+	// not needed anymore; b/c changed from "dynamic increase" to "fixed length"
 	//                ---- now for eaching training, program fetch an indexed sample, not the last sample     
 	//__inputLayer->ClearUsedSampleForInputLayer();
     }

@@ -22,19 +22,23 @@ ConstructLayer::ConstructLayer()
     // place holder
 }
 
-ConstructLayer::ConstructLayer(LayerType t)
+ConstructLayer::ConstructLayer(LayerType t, LayerDimension layer_dimension)
 {
+    // for input layer
     __type = t;
+    __layerDimension = layer_dimension;
 }
 
 ConstructLayer::ConstructLayer(LayerType t, int n_neurons)
 {
+    // for fc layer
     __type = t;
     SetNumberOfNeuronsFC((size_t)n_neurons);
 }
 
 ConstructLayer::ConstructLayer(LayerType t, int n_kernels, std::pair<size_t, size_t> d)
 {
+    // for cnn and pooling layer
     __type = t;
     SetNumberOfKernelsCNN((size_t)n_kernels);
     // kernel size

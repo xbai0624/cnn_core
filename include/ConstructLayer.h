@@ -19,7 +19,7 @@ class ConstructLayer: public Layer
 {
 public:
     ConstructLayer();
-    ConstructLayer(LayerType t); // for input layer
+    ConstructLayer(LayerType t, LayerDimension layer_dimension); // for input layer
     ConstructLayer(LayerType t, int n_neurons); // for fc layer and output layer
     ConstructLayer(LayerType t, int n_kernels, std::pair<size_t, size_t> d); // for cnn layer
     ~ConstructLayer();
@@ -235,6 +235,10 @@ private:
     // 9):
     // an interface for processing input image
     DataInterface *__p_data_interface = nullptr;
+
+    // 10): 
+    // The dimension of this layer (2D or 1D), currently only input layer need to use this parameter
+    LayerDimension __layerDimension = LayerDimension::Undefined;
 };
 
 #endif

@@ -27,8 +27,15 @@ enum class LayerType
     fullyConnected,
     cnn,
     pooling,
-    input, // input and output layer also require special treatment
+    input, // 1) input and output layer also require special treatment; input layer has no neurons, it is a transfer layer forwarding data to its followers
     output
+};
+
+enum class LayerDimension
+{
+    _1D,
+    _2D,
+    Undefined
 };
 
 

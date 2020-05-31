@@ -1,6 +1,25 @@
 #ifndef DATA_INTERFACE_H
 #define DATA_INTERFACE_H
 
+/*
+ *   This class is for helping input layer get data
+ *          1) This class does not change original data dimension
+ *          2) Data dimension change is done in input layer
+ *
+ *          3) Input layer is not a "normal" NN layer, it does not have nerons, 
+ *             it is just for data prepare (re-dimensioning data to fulfill
+ *             to the requirements of its following layer.)
+ *
+ *          4) Input layer must have the __layerDimension parameter set: either 1D or 2D
+ *             --) If input layer is 1D, then input layer will do a vectorization
+ *                 for the batch data
+ *             --) If input layer is 2D, then input layer will do a tensorization
+ *                 for the batch data
+ *
+ *          5) Currently, the LayerDimension info is only used in input layer design
+ *             other layers including output layer already have enough information to intialize
+ */
+
 #include "Matrix.h"
 #include "Layer.h"
 
