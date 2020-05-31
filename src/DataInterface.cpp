@@ -60,50 +60,8 @@ void DataInterface::test()
 
 std::vector<Matrix>& DataInterface::GetNewBatchData()
 {
-    //
-    //  here fill new batch of data
-    //
-    //  __data.clear();
-    //  ...
-    //
-    //  to be continued ...
-    //
-
-    __data.clear();
-    __label.clear();
-
-
-    //---------------------------------------------
-    // prepare data
-    int batch_size = gBatchSize / 2; // because signal + cosmic = gBatchSize
-    int offset = gDataIndex * batch_size;
-    for(int i=0;i<batch_size;i++) // signal data
-    {
-        Matrix M = test_training_signal[offset+i].Reshape(100, 1);
-        __data.push_back(M);
-    }
-    for(int i=0;i<batch_size;i++) // cosmic data
-    {
-        Matrix M = test_training_cosmic[offset+i].Reshape(100, 1);
-        __data.push_back(M);
-    }
-
-    gDataIndex++;
-
-    //---------------------------------------------
-    // prepare label
-    Matrix signal_label_m(2, 1, 0); // signal label
-    signal_label_m[0][0] = 1;
-    Matrix cosmic_label_m(2, 1, 0); // cosmic label
-    cosmic_label_m[1][0] = 1;
-    for(int i=0;i<batch_size;i++)
-    {
-        __label.push_back(signal_label_m);
-    }
-    for(int i=0;i<batch_size;i++)
-    {
-        __label.push_back(cosmic_label_m);
-    }
+    // return data in matrix form
+    UpdateBatch(__data, __label);
 
     return __data;
 }
@@ -111,7 +69,7 @@ std::vector<Matrix>& DataInterface::GetNewBatchData()
 
 std::vector<Matrix>& DataInterface::GetNewBatchLabel()
 {
-    if(gLabelIndex + 1 != gDataIndex)
+    if(gLabelIndex + 1 != gDataIndex) // this is to make sure one access data first, then label
     {
         cout<<"Error: DataInterface data & label are not aligned."<<endl;
 	exit(0);
@@ -120,6 +78,83 @@ std::vector<Matrix>& DataInterface::GetNewBatchLabel()
 
     return __label;
 }
+
+std::vector<Images>& DataInterface::GetNewBatchDataImage()
+{
+    // return data in Images form
+    
+    // 1) update batch
+    UpdateBatch(__data, __label);
+    assert(__data.size() == __label.size());
+
+    // 2) reform
+    for(size_t i=0;i<__data.size();i++)
+    {
+        // reform it in Images format
+        Images _image;
+	_image.OutputImageFromKernel.push_back(__data[i]);
+	__data_image.push_back(_image);
+
+	Images _image_label;
+	_image_label.OutputImageFromKernel.push_back(__label[i]);
+	__label_image.push_back(_image_label);
+    }
+
+    return __data_image;
+}
+
+std::vector<Images>& DataInterface::GetNewBatchLabelImage()
+{
+    if(gLabelIndex + 1 != gDataIndex) // this is to make sure one access data first, then label
+    {
+        cout<<"Error: DataInterface data & label are not aligned."<<endl;
+	exit(0);
+    }
+    gLabelIndex++;
+
+    return __label_image;
+}
+
+
+void DataInterface::UpdateBatch(vector<Matrix> &data, vector<Matrix> &label)
+{
+    // clear previous batch
+    data.clear();
+    label.clear();
+
+    //---------------------------------------------
+    // prepare data
+    int batch_size = gBatchSize / 2; // because signal + cosmic = gBatchSize
+    int offset = gDataIndex * batch_size;
+    for(int i=0;i<batch_size;i++) // signal data
+    {
+        // data signal
+        Matrix M = test_training_signal[offset+i].Reshape(100, 1);
+	//Matrix M = test_training_signal[offset+i];
+        data.push_back(M);
+
+        // label
+	Matrix signal_label_m(2, 1, 0); // signal label
+	signal_label_m[0][0] = 1;
+	label.push_back(signal_label_m);
+    }
+    for(int i=0;i<batch_size;i++) // cosmic data
+    {
+        // data cosmic
+        Matrix M = test_training_cosmic[offset+i].Reshape(100, 1);
+	//Matrix M = test_training_cosmic[offset+i];
+        data.push_back(M);
+
+	// label
+	Matrix cosmic_label_m(2, 1, 0); // cosmic label
+	cosmic_label_m[1][0] = 1;
+        label.push_back(cosmic_label_m);
+    }
+
+    // get ready for next batch
+    gDataIndex++;
+}
+
 
 void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 {

@@ -229,7 +229,6 @@ void ConstructLayer::InitNeurons()
 	    for(size_t jj=0;jj<j;jj++)
 	    {
 		__neurons[kk][ii][jj]->SetLayer(dynamic_cast<Layer*>(this));
-		//__neurons[kk][ii][jj]->SetLayer(this);
 		//__neurons[kk][ii][jj]->SetPreviousLayer(__prevLayer); // obsolete
 		//__neurons[kk][ii][jj]->SetNextLayer(__nextLayer);     // obsolete
 	    }
