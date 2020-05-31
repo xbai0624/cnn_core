@@ -95,7 +95,7 @@ public:
     virtual std::vector<Images>& GetImagesFullDelta();
     void UpdateImagesDelta(int sample_index);
     // Fill A matrix for input layer
-    void FillDataToInputLayerA();
+    void FillBatchDataToInputLayerA();
 
     // get active neuron flags
     //virtual std::vector<std::vector<std::vector<NeuronCoord>>>& GetActiveNeuronFlags();
@@ -130,6 +130,7 @@ public:
     virtual std::vector<Matrix>* GetWeightMatrix();
     virtual std::vector<Matrix>* GetBiasVector();
     virtual LayerType GetType();
+    virtual LayerDimension GetLayerDimension();
     virtual float GetDropOutFactor();
     virtual std::vector<Filter2D>& GetActiveFlag();
     virtual std::pair<size_t, size_t> GetOutputImageSize(); // used for setup layer

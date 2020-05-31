@@ -199,6 +199,8 @@ struct Images
 	return Ret;
     }
 };
+std::ostream & operator<<(std::ostream &, const Images & );
+
 
 
 // ref: https://towardsdatascience.com/epoch-vs-iterations-vs-batch-size-4dfb9c7ce9c9
@@ -289,7 +291,7 @@ public:
     virtual NeuronCoord GetActiveNeuronDimension()=0;
     virtual void Print() = 0;
     virtual void PassDataInterface(DataInterface *data_interface) = 0;
-    virtual void FillDataToInputLayerA() = 0;
+    virtual void FillBatchDataToInputLayerA() = 0;
     virtual void ClearUsedSampleForInputLayer_obsolete() = 0;
 
     // setters
@@ -306,6 +308,7 @@ public:
     virtual std::vector<Matrix>* GetWeightMatrix()=0;
     virtual std::vector<Matrix>* GetBiasVector()=0;
     virtual LayerType GetType()=0;
+    virtual LayerDimension GetLayerDimension()=0;
     virtual float GetDropOutFactor()=0;
     virtual std::vector<Filter2D>& GetActiveFlag()=0;
     virtual std::pair<size_t, size_t> GetOutputImageSize() = 0; // used for setup layer

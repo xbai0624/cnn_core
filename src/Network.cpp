@@ -31,7 +31,7 @@ void Network::ConstructLayers()
 {
     // 1) Data interface, this is a tool class, for data prepare
     //DataInterface data_interface;
-    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat");
+    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_1D);
     //auto a = data_interface->GetNewBatchData();
     //for(auto &i: a) cout<<i<<endl;
     //auto b = data_interface.GetNewBatchLabel();
@@ -126,7 +126,7 @@ void Network::ForwardPropagateForBatch()
     __dataInterface->GetNewBatchLabel();
 
     // fill data to input layer
-    __inputLayer->FillDataToInputLayerA();
+    __inputLayer->FillBatchDataToInputLayerA();
 
     // get batch size
     int sample_size = __dataInterface->GetBatchSize();

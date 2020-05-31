@@ -309,19 +309,37 @@ void ConstructLayer::InitNeuronsInputLayer()
         exit(0);
     }
 
+    assert(__layerDimension != LayerDimension::Undefined);
+
     auto dim = __p_data_interface->GetDataDimension();
-    assert(dim.second == 1); // make sure matrix transformation has been done
-    //cout<<"Info::input layer dimension: "<<dim<<endl;
-    Pixel2D<Neuron*> image(dim.first, dim.second);
-    for(size_t i=0;i<dim.first;i++)
+
+    // 1):
+    // for 1D (fc) input layer; 1D input layer needs fake neurons, which will be used by
+    //     its following layer to setup weight matrix dimension
+    if(__layerDimension == LayerDimension::_1D)
     {
-	for(size_t j=0;j<dim.second;j++)
+	assert(dim.second == 1); // make sure matrix transformation has been done
+	//cout<<"Info::input layer dimension: "<<dim<<endl;
+	Pixel2D<Neuron*> image(dim.first, dim.second);
+	for(size_t i=0;i<dim.first;i++)
 	{
-	    Neuron *n = new Neuron();
-	    image[i][0] = n;
+	    for(size_t j=0;j<dim.second;j++)
+	    {
+		Neuron *n = new Neuron();
+		image[i][0] = n;
+	    }
 	}
+	__neurons.push_back(image);
     }
-    __neurons.push_back(image);
+
+    // 2):
+    // for 2D input layer, 2D input layer does not need fake neurons, instead
+    //     its following layers will directly get 'A' images from 2D input layer
+    else if(__layerDimension == LayerDimension::_2D)
+    {
+        // no operation needed
+	// reserved for now
+    }
 }
 
 
@@ -334,10 +352,19 @@ void ConstructLayer::InitFilters()
     // init filter 2d matrix, fill true value to all elements
     if(__type == LayerType::input)
     {
-	assert(__neurons.size() == 1); // only one kernel
-	auto dim = __neurons[0].Dimension();
-	Filter2D f(dim.first, dim.second);
-	__activeFlag.push_back(f);
+	if(__layerDimension == LayerDimension::_1D)
+	{
+	    assert(__neurons.size() == 1); // only one kernel
+	    auto dim = __neurons[0].Dimension();
+	    Filter2D f(dim.first, dim.second);
+	    __activeFlag.push_back(f);
+	}
+	else if(__layerDimension == LayerDimension::_2D)
+	{
+	    // filter in 2D input layer is not used
+	    // b/c its subsequent layer directly get 'A' images from it
+	    // reserved for now
+	}
     }
     else if(__type == LayerType::output)
     {
@@ -616,7 +643,7 @@ std::vector<Images>& ConstructLayer::GetImagesFullA()
 }
 
 
-void ConstructLayer::FillDataToInputLayerA()
+void ConstructLayer::FillBatchDataToInputLayerA()
 {
     // if this layer is input layer, then fill the 'a' matrix directly with input image data
     auto input_data = __p_data_interface->GetCurrentBatchData();
@@ -1298,7 +1325,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 	    for(size_t j=0;j<dim.second;j++)
 	    {
 		if(__prevLayer != nullptr &&   // current layer is not input layer
-			(__prevLayer->GetType() == LayerType::input || __prevLayer->GetType() == LayerType::fullyConnected ) // only fc layer and input layer no need for other type layers
+			(__prevLayer->GetType() == LayerType::fullyConnected ) // only fc layer no need for other type layers (output layer is labeled as 'fc'; input layer has no w&b matrix)
 		  )
 		{
 		    auto filter_prev = __prevLayer->GetActiveFlag();
@@ -1403,6 +1430,11 @@ std::vector<Matrix>* ConstructLayer::GetBiasVector()
 LayerType ConstructLayer::GetType()
 {
     return __type;
+}
+
+LayerDimension ConstructLayer::GetLayerDimension()
+{
+    return __layerDimension;
 }
 
 float ConstructLayer::GetDropOutFactor()
@@ -1540,7 +1572,7 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
     // after finishing one batch, update weights and bias, for FC layer
     // get output from previous layer for current training sample
     vector<Images> a_images;
-    if(__prevLayer->GetType() != LayerType::input && __prevLayer->GetType() != LayerType::fullyConnected)
+    if(/*__prevLayer->GetType() != LayerType::input && */__prevLayer->GetType() != LayerType::fullyConnected) // input layer has no W&B
     {
         // if previous layer is not an input/fullyConnected layer, then Vectorization operation is needed
 	//      this is for cnn->fc or pooling->fc

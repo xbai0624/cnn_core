@@ -3,20 +3,15 @@
 
 /*
  *   This class is for helping input layer get data
- *          1) This class does not change original data dimension
- *          2) Data dimension change is done in input layer
+ *          1) This class prepares data for input layer, it needs input layer Dimension information
+ *             to prepare data with the correct dimension
+ *             --) If input layer is 1D, then this class will prepare data in 1D form
+ *             --) If input layer is 2D, then this class will prepare data in 2D form
  *
- *          3) Input layer is not a "normal" NN layer, it does not have nerons, 
- *             it is just for data prepare (re-dimensioning data to fulfill
- *             to the requirements of its following layer.)
- *
- *          4) Input layer must have the __layerDimension parameter set: either 1D or 2D
- *             --) If input layer is 1D, then input layer will do a vectorization
- *                 for the batch data
- *             --) If input layer is 2D, then input layer will do a tensorization
- *                 for the batch data
- *
- *          5) Currently, the LayerDimension info is only used in input layer design
+ *          2) Input layer is not a "normal" NN layer, it does not have neurons, 
+ *          3) Input layer must have the __layerDimension parameter set: either 1D or 2D
+ 
+ *          4) Currently, the LayerDimension info is only used in input_layer and DataInterface design
  *             other layers including output layer already have enough information to intialize
  */
 
@@ -28,8 +23,8 @@
 class DataInterface
 {
 public:
-    DataInterface();
-    DataInterface(const char* path1, const char* path2); // for code development
+    DataInterface(LayerDimension ld);
+    DataInterface(const char* path1, const char* path2, LayerDimension ld); // for code development
     ~DataInterface();
 
     int GetBatchSize(){return gBatchSize;};
@@ -50,12 +45,12 @@ public:
  
     // a helper
     void UpdateBatch(std::vector<Matrix>& data_image, std::vector<Matrix>& label_image);
+    void loadFile(const char* path, std::vector<Matrix> &m); // for code development
 
+    // members
     std::pair<size_t, size_t> GetDataDimension(){return __dataDimension;};
 
     void test();
-
-    void loadFile(const char* path, std::vector<Matrix> &m); // for code development
 
 private:
     int gBatchSize = 100;
@@ -75,6 +70,7 @@ private:
     std::vector<Matrix> test_training_signal; // just for code development, loading all training data into this memory
     std::vector<Matrix> test_training_cosmic; // just for code development
 
+    LayerDimension __gLayerDimension = LayerDimension::Undefined;
 };
 
 #endif

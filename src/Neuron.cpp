@@ -160,9 +160,10 @@ void Neuron::UpdateZFC(int sample_index)
     // weight matrix dimension will be: (1, M)
     Layer* __previousLayer = __layer->GetPrevLayer();
     std::vector<Images> _t ;
-    if(__previousLayer->GetType() != LayerType::fullyConnected && __previousLayer->GetType() != LayerType::input)
+    if(__previousLayer->GetType() != LayerType::fullyConnected && __previousLayer->GetType() != LayerType::input )
     { 
 	// need vectorization 2D->1D
+	// input layer vectorization is already done in DataInterface class
         auto tmp_v = __previousLayer->GetImagesActiveA();
 	for(auto &i: tmp_v)
 	{
@@ -170,6 +171,7 @@ void Neuron::UpdateZFC(int sample_index)
 	}
     }
     else {
+        // previous layer is fc, no need to do anything
 	_t = __previousLayer -> GetImagesActiveA();
     }
 

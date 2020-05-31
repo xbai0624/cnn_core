@@ -8,16 +8,22 @@
 
 using namespace std;
 
-DataInterface::DataInterface()
+DataInterface::DataInterface(LayerDimension ld)
 {
+    // 1)
+    __gLayerDimension = ld;
     // place holder
     // currently only accepts 2D image format
     test();
 }
 
 
-DataInterface::DataInterface(const char* p_signal, const char* p_cosmic)
+DataInterface::DataInterface(const char* p_signal, const char* p_cosmic, LayerDimension ld)
 {
+    // 1) first need to set layer dimension
+    __gLayerDimension = ld;
+
+    // 2) then load data to memory
     // for code development
     loadFile(p_signal, test_training_signal);
     loadFile(p_cosmic, test_training_cosmic);
@@ -122,6 +128,9 @@ void DataInterface::UpdateBatch(vector<Matrix> &data, vector<Matrix> &label)
     data.clear();
     label.clear();
 
+    size_t total_elements = __dataDimension.first*__dataDimension.second;
+    assert( total_elements > 0); // make sure data dimension has been set
+
     //---------------------------------------------
     // prepare data
     int batch_size = gBatchSize / 2; // because signal + cosmic = gBatchSize
@@ -129,8 +138,16 @@ void DataInterface::UpdateBatch(vector<Matrix> &data, vector<Matrix> &label)
     for(int i=0;i<batch_size;i++) // signal data
     {
         // data signal
-        Matrix M = test_training_signal[offset+i].Reshape(100, 1);
-	//Matrix M = test_training_signal[offset+i];
+        Matrix M;	
+	if(__gLayerDimension == LayerDimension::_1D)
+	{
+	    // if input layer is 1D, then reshape images into a collum vector
+	    M = test_training_signal[offset+i].Reshape(total_elements, 1);
+	}
+	else
+	{
+	    M = test_training_signal[offset+i];
+	}
         data.push_back(M);
 
         // label
@@ -141,8 +158,15 @@ void DataInterface::UpdateBatch(vector<Matrix> &data, vector<Matrix> &label)
     for(int i=0;i<batch_size;i++) // cosmic data
     {
         // data cosmic
-        Matrix M = test_training_cosmic[offset+i].Reshape(100, 1);
-	//Matrix M = test_training_cosmic[offset+i];
+	Matrix M;
+	if(__gLayerDimension == LayerDimension::_1D)
+	{
+	    M = test_training_cosmic[offset+i].Reshape(total_elements, 1);
+	}
+	else
+	{
+	    M = test_training_cosmic[offset+i];
+	}
         data.push_back(M);
 
 	// label
@@ -190,6 +214,15 @@ void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
     }
 
     // *** implement the image dimension
-    Matrix tmp = contents[0].Reshape(100, 1);
-    __dataDimension = tmp.Dimension();
+    assert(__gLayerDimension != LayerDimension::Undefined); // make sure 1D or 2D interface
+    auto dim = contents[0].Dimension();
+    if(__gLayerDimension == LayerDimension::_1D)
+    {
+	__dataDimension.second = 1;
+	__dataDimension.first = dim.first * dim.second;
+    }
+    else 
+    {
+	__dataDimension = dim;
+    }
 }

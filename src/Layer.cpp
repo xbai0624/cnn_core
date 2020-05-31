@@ -25,6 +25,18 @@ std::ostream & operator<<(std::ostream& os, const NeuronCoord &c)
     return os;
 }
 
+std::ostream & operator<<(std::ostream &os, const Images & images)
+{
+    os<<"images from all kernels during one training sample:"<<std::endl;
+    for(size_t i=0;i<images.OutputImageFromKernel.size();i++)
+    {
+        os<<"kernel: "<<i<<std::endl;
+	Matrix m = (images.OutputImageFromKernel)[i];
+	os<<m<<std::endl;
+    }
+    return os;
+}
+
 
 
 int Layer::__layerCount = 0;
