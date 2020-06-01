@@ -67,7 +67,7 @@ void Network::ConstructLayers()
     //layer_output -> BatchInit();
 
     // 6) connect all layers
-    l0->SetNextLayer(layer_output); // what a fuck!!! 
+    l0->SetNextLayer(layer_output); // This line is ugly, to be improved
 
     // 7) save all constructed layers
     __inputLayer = layer_input;

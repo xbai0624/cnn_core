@@ -8,7 +8,7 @@ It does not rely on any availabe external Neural Network libraries,
 and is purely for research purpose. 
 
 The Matrix operation has also been implemented independently in the package. 
-One can also turn on parallel computing for Matrix operation.
+One can turn on parallel computing for Matrix operation.
 One can also turn on parallel computing for batch level traning.
 
 One can use this libary to construct CNN, DNN or mixed neural networks.
