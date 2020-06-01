@@ -19,6 +19,7 @@ class ConstructLayer: public Layer
 {
 public:
     ConstructLayer();
+    ConstructLayer(LayerParameterList parameter_list); // general layer constructor; pls use this one to construct all type of layers
     ConstructLayer(LayerType t, LayerDimension layer_dimension); // for input layer
     ConstructLayer(LayerType t, int n_neurons); // for fc layer and output layer
     ConstructLayer(LayerType t, int n_kernels, std::pair<size_t, size_t> d); // for cnn layer

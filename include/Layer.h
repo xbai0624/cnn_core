@@ -28,7 +28,8 @@ enum class LayerType
     cnn,
     pooling,
     input, // 1) input and output layer also require special treatment; input layer has no neurons, it is a transfer layer forwarding data to its followers
-    output
+    output,
+    Undefined
 };
 
 enum class LayerDimension
@@ -42,14 +43,16 @@ enum class LayerDimension
 enum class Regularization 
 {
     L2,
-    L1
+    L1,
+    Undefined
 };
 
 enum class CostFuncType
 {
     cross_entropy,  // sigmoid
     log_likelihood, // for softmax
-    quadratic_sum   // not practical, for test only
+    quadratic_sum,  // not practical, for test only
+    Undefined
 };
 
 
@@ -102,8 +105,6 @@ struct Pixel2D
     {
         return __plane[i];
     }
-
-
 };
 
 
@@ -210,20 +211,41 @@ struct LayerParameterList
     //     use this struct to pass parameters to each layers
     //     to avoid forget setting some parameters for layers
 
-    LayerType _pLayerType;              // for all layers
-    LayerDimension _pLayerdimension;    // for all layers
+    LayerType _gLayerType;              // for all layers
+    LayerDimension _gLayerDimension;    // for all layers
 
     DataInterface * _pDataInterface;    // for all layers
 
     size_t _nNeuronsFC;                 // for fully connected layers
     size_t _nKernels;                   // for cnn and pooling layers
+    std::pair<size_t, size_t> _gDimKernel; // kernel dimension for cnn and pooling layers
 
-    float _glearningRate;               // for non-input layers
+    float _gLearningRate;               // for non-input layers
 
     bool _gUseDropout;                  // for middle layers (non-input, non-output)
-    bool _gUseL2Regularization;         // for non-input layers
-    bool _gUseL1Regularization;         // for non-input layers
+    float _gDropoutFactor;              // for middle layers
+
+    Regularization _gRegularization;              // for non-input layers
     float _gRegularizationParameter;    // for non-input layers
+
+    // default constructor
+    LayerParameterList():
+	_gLayerType(LayerType::Undefined), _gLayerDimension(LayerDimension::Undefined), 
+	_pDataInterface(nullptr), _nNeuronsFC(0), _nKernels(0), _gDimKernel(std::pair<size_t, size_t>(0, 0)),
+	_gLearningRate(0), _gUseDropout(false), _gDropoutFactor(0), _gRegularization(Regularization::Undefined),
+	_gRegularizationParameter(0)
+    {
+    }
+
+    LayerParameterList(LayerType layer_type, LayerDimension layer_dimension, DataInterface *data_interface, 
+	    size_t n_neurons, size_t n_kernels, std::pair<size_t, size_t> dimension_kernel, float learning_rate,
+	    bool use_dropout, float dropout_factor, Regularization regu, float regu_parameter):
+	_gLayerType(layer_type), _gLayerDimension(layer_dimension), 
+	_pDataInterface(data_interface), _nNeuronsFC(n_neurons), _nKernels(n_kernels), _gDimKernel(dimension_kernel),
+	_gLearningRate(learning_rate), _gUseDropout(use_dropout), _gDropoutFactor(dropout_factor), _gRegularization(regu),
+	_gRegularizationParameter(regu_parameter)
+    {
+    }
 };
 
 

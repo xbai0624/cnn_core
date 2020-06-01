@@ -22,6 +22,53 @@ ConstructLayer::ConstructLayer()
     // place holder
 }
 
+ConstructLayer::ConstructLayer(LayerParameterList p_list)
+{
+    // common parameters
+    __type = p_list._gLayerType;
+    // drop out
+    if(p_list._gUseDropout)
+    {
+        EnableDropOut();
+        SetDropOutFactor(p_list._gDropoutFactor);
+    }
+    SetLearningRate(p_list._gLearningRate);
+    __layerDimension = p_list._gLayerDimension;
+    __p_data_interface = p_list._pDataInterface;
+    __regularizationMethod = p_list._gRegularization;
+    __regularizationParameter = p_list._gRegularizationParameter;
+
+    // parameters dependent on layer type
+    if(__type == LayerType::input)
+    {
+        __layerDimension = p_list._gLayerDimension;
+    }
+    else if(__type == LayerType::fullyConnected)
+    {
+        SetNumberOfNeuronsFC(p_list._nNeuronsFC);
+    }
+    else if(__type == LayerType::cnn)
+    {
+        SetNumberOfKernelsCNN(p_list._nKernels);
+	SetKernelSizeCNN(p_list._gDimKernel);
+    }
+    else if(__type == LayerType::pooling)
+    {
+        SetNumberOfKernelsCNN(p_list._nKernels);
+	SetKernelSizeCNN(p_list._gDimKernel);
+    }
+    else if(__type == LayerType::output)
+    {
+        SetNumberOfNeuronsFC(p_list._nNeuronsFC);
+    }
+    else
+    {
+	std::cout<<__func__<<" Error: trying to construct unsupported layer."
+	    <<std::endl;
+	exit(0);
+    }
+}
+
 ConstructLayer::ConstructLayer(LayerType t, LayerDimension layer_dimension)
 {
     // for input layer

@@ -37,7 +37,7 @@ DataInterface::~DataInterface()
 
 int DataInterface::GetNumberOfBatches()
 {
-    // this line is to maliciously cause troulbe, what a fk!
+    // this line is to maliciously cause troulbe, what a ...
     assert(test_training_signal.size() == test_training_cosmic.size());
     int total_entries = test_training_signal.size();
 
