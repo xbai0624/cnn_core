@@ -7,28 +7,6 @@
 
 class DataInterface;
 
-struct LayerParameter
-{
-    // summary for layer parameters
-    //     use this struct to pass parameters to each layers
-    //     to avoid forget setting some parameters for layers
-
-    LayerType _pLayerType;
-    LayerDimension _pLayerdimension;
-
-    DataInterface * _pDataInterface;
-
-    size_t _nNeuronsFC;
-    size_t _nKernels;
-
-    float _glearningRate;
-
-    bool _gUseDropout;
-    bool _gUseL2Regularization;
-    bool _gUseL1Regularization;
-
-};
-
 class Network 
 {
 public:

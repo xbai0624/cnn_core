@@ -202,6 +202,30 @@ struct Images
 std::ostream & operator<<(std::ostream &, const Images & );
 
 
+// A list summarizing all parameters used for constructing layers
+class DataInterface; // declaratioin for DataInterface class
+struct LayerParameterList
+{
+    // summary for layer parameters
+    //     use this struct to pass parameters to each layers
+    //     to avoid forget setting some parameters for layers
+
+    LayerType _pLayerType;              // for all layers
+    LayerDimension _pLayerdimension;    // for all layers
+
+    DataInterface * _pDataInterface;    // for all layers
+
+    size_t _nNeuronsFC;                 // for fully connected layers
+    size_t _nKernels;                   // for cnn and pooling layers
+
+    float _glearningRate;               // for non-input layers
+
+    bool _gUseDropout;                  // for middle layers (non-input, non-output)
+    bool _gUseL2Regularization;         // for non-input layers
+    bool _gUseL1Regularization;         // for non-input layers
+    float _gRegularizationParameter;    // for non-input layers
+};
+
 
 // ref: https://towardsdatascience.com/epoch-vs-iterations-vs-batch-size-4dfb9c7ce9c9
 
