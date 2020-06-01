@@ -159,7 +159,9 @@ void Neuron::UpdateZFC(int sample_index)
     // currently layer and its previous layer are fully connected
     // weight matrix dimension will be: (1, M)
     Layer* __previousLayer = __layer->GetPrevLayer();
-    std::vector<Images>& _t = __previousLayer -> GetImagesActiveA();
+    std::vector<Images>& _t = __previousLayer -> GetImagesActiveA(); // this line with '&' is 5 times faster than the following line without '&'
+    //std::vector<Images> _t = __previousLayer -> GetImagesActiveA();
+
     //cout<<"batch size: "<<_t.size()<<endl;
     //cout<<"kernel number: "<<_t[0].GetNumberOfKernels()<<endl;
     //cout<<" image dimension: "<<_t[0].OutputImageFromKernel[0].Dimension()<<endl;
@@ -172,7 +174,7 @@ void Neuron::UpdateZFC(int sample_index)
 
     // get images for current sample
     Images images;
-    if(__previousLayer->GetType() != LayerType::fullyConnected && __previousLayer->GetType() != LayerType::input )
+    if(__previousLayer->GetType() != LayerType::fullyConnected/* && __previousLayer->GetType() != LayerType::input*/ )
     {
 	// need vectorization 2D->1D
 	// input layer vectorization is already done in DataInterface class
@@ -181,8 +183,7 @@ void Neuron::UpdateZFC(int sample_index)
     else
     {
         // previous layer is fc, no need to do anything
-        //std::cout<<"doing vectorization..."<<std::endl;
-        images = _t[sample_index].Vectorization();
+        images = _t[sample_index];
     }
 	
     if(images.OutputImageFromKernel.size() != 1) 
@@ -552,27 +553,27 @@ void Neuron::UpdateDeltaCNN(int sample_index)
     double _sigma_prime = __sigmaPrime[sample_index];
 
     Layer* __nextLayer = __layer->GetNextLayer();
+    std::vector<Images> & deltaVecNext = __nextLayer->GetImagesActiveDelta(); // for 2D layer, images are all active, drop out happens on kernel
+ 
+    auto weightVecNext = __nextLayer->GetWeightMatrix();
 
-    std::vector<Images> deltaVecNext;
+    //Images &image_next_layer = deltaVecNext[sample_index]; // delta from next layer for current training sample
+
+    Images image_next_layer; // delta from next layer for current training sample
     auto output_image_size_for_current_layer = __layer->GetOutputImageSize();
     if(__nextLayer->GetType() != LayerType::cnn && __nextLayer->GetType() != LayerType::pooling)
     {
         // next layer is a 1D layer, needs tensorization for back propagation
-        auto delta_from_next_layer = __nextLayer->GetImagesActiveDelta();
-	for(auto &i: delta_from_next_layer)
-	{
-	    deltaVecNext.push_back(i.Tensorization(output_image_size_for_current_layer.first, output_image_size_for_current_layer.second));
-	}
-    }
-    else
+	//        to get back the orignal dimension
+	//        !!! NOTE !!! 2D->1D or 1D->2D has no dimension reduction operation (Dimension reduction only happens on 2D->2D and 1D->1D)
+	//        so it is safe to use Tensorization()
+	image_next_layer = deltaVecNext[sample_index].Tensorization(output_image_size_for_current_layer.first, output_image_size_for_current_layer.second);
+    } 
+    else 
     {
         // next layer is a 2D layer, no extra operation needed
-	deltaVecNext = __nextLayer->GetImagesActiveDelta();
+	image_next_layer = deltaVecNext[sample_index];
     }
-
-    auto weightVecNext = __nextLayer->GetWeightMatrix();
-
-    Images &image_next_layer = deltaVecNext[sample_index]; // delta for current training sample
     std::vector<Matrix> & vec_delta_image = image_next_layer.OutputImageFromKernel;
 
     size_t C_next = vec_delta_image.size();
@@ -625,31 +626,25 @@ void Neuron::UpdateDeltaPooling(int sample_index)
 
     Layer* __nextLayer = __layer->GetNextLayer();
 
+    //Images & delta_image_for_current_sample = deltaNext[sample_index]; // delta image for current sample
+    
     // get delta images from its next layer
-    std::vector<Images> deltaNext;
+    std::vector<Images> &deltaNext = __nextLayer->GetImagesActiveDelta(); // for 2D layer, images are all active, drop out happens on kernel
+    Images delta_image_for_current_sample; // delta image for current sample
     auto outputImageSizeForCurrentLayer = __layer->GetOutputImageSize();
-    auto tensorization = [&](std::vector<Images>& data_from_next_layer)->std::vector<Images>
-    {
-        // tensorization for vector of Images
-        std::vector<Images> Ret;
-	for(auto &i: data_from_next_layer)
-	{
-	    Ret.push_back(i.Tensorization(outputImageSizeForCurrentLayer.first, outputImageSizeForCurrentLayer.second));
-	}
-	return Ret;
-    };
     if(__nextLayer->GetType() != LayerType::cnn && __nextLayer->GetType() != LayerType::pooling)
     {
         //  if next layer is not cnn or pooling (2D), then tensorization is needed for back propagation
-        auto tmp =  __nextLayer->GetImagesActiveDelta();
-	deltaNext = tensorization(tmp);
-    }
+	//        to get back the orignal dimension
+	//        !!! NOTE !!! 2D->1D or 1D->2D has no dimension reduction operation (Dimension reduction only happens on 2D->2D and 1D->1D)
+	//        so it is safe to use Tensorization()
+	delta_image_for_current_sample = deltaNext[sample_index].Tensorization(outputImageSizeForCurrentLayer.first, outputImageSizeForCurrentLayer.second);
+    } 
     else
     {
-	deltaNext = __nextLayer->GetImagesActiveDelta();
+	delta_image_for_current_sample = deltaNext[sample_index];
     }
 
-    Images & delta_image_for_current_sample = deltaNext[sample_index]; // delta image for current sample
     std::vector<Matrix> &deltaImages = delta_image_for_current_sample.OutputImageFromKernel; // matrix
 
     if(deltaImages.size() <= __coord.k) 
