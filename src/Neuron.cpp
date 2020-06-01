@@ -159,22 +159,7 @@ void Neuron::UpdateZFC(int sample_index)
     // currently layer and its previous layer are fully connected
     // weight matrix dimension will be: (1, M)
     Layer* __previousLayer = __layer->GetPrevLayer();
-    std::vector<Images> _t ;
-    if(__previousLayer->GetType() != LayerType::fullyConnected && __previousLayer->GetType() != LayerType::input )
-    { 
-	// need vectorization 2D->1D
-	// input layer vectorization is already done in DataInterface class
-        auto tmp_v = __previousLayer->GetImagesActiveA();
-	for(auto &i: tmp_v)
-	{
-	    _t.push_back(i.Vectorization());
-	}
-    }
-    else {
-        // previous layer is fc, no need to do anything
-	_t = __previousLayer -> GetImagesActiveA();
-    }
-
+    std::vector<Images>& _t = __previousLayer -> GetImagesActiveA();
     //cout<<"batch size: "<<_t.size()<<endl;
     //cout<<"kernel number: "<<_t[0].GetNumberOfKernels()<<endl;
     //cout<<" image dimension: "<<_t[0].OutputImageFromKernel[0].Dimension()<<endl;
@@ -183,8 +168,23 @@ void Neuron::UpdateZFC(int sample_index)
 	std::cout<<"Error: previous layer has not 'A' image."<<std::endl;
 	exit(0);
     }
-    //Images &images = _t.back(); // get images for current sample
-    Images &images = _t[sample_index]; // get images for current sample
+    //Images &images = _t[sample_index]; // get images for current sample
+
+    // get images for current sample
+    Images images;
+    if(__previousLayer->GetType() != LayerType::fullyConnected && __previousLayer->GetType() != LayerType::input )
+    {
+	// need vectorization 2D->1D
+	// input layer vectorization is already done in DataInterface class
+	images = _t[sample_index].Vectorization(); // get images for current sample
+    }
+    else
+    {
+        // previous layer is fc, no need to do anything
+        //std::cout<<"doing vectorization..."<<std::endl;
+        images = _t[sample_index].Vectorization();
+    }
+	
     if(images.OutputImageFromKernel.size() != 1) 
     {
 	std::cout<<"Eroor: layer type not match, expecting FC layer, FC layer should only have 1 kernel."<<std::endl;

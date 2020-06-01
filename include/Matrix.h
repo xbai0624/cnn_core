@@ -85,7 +85,7 @@ public:
     void SetInitialDimension(size_t, size_t);
 
     // reshape
-    Matrix Reshape(size_t m, size_t n);
+    Matrix Reshape(size_t m, size_t n) const;
     // transpose
     Matrix Transpose();
     // rotate
@@ -110,7 +110,7 @@ public:
     // fill matrix with random numbers
     void Random();
     void RandomGaus(float mu, float sigma);
-    std::pair<size_t, size_t> Dimension();
+    std::pair<size_t, size_t> Dimension() const;
 
     void Clear();
     // fill element, row first

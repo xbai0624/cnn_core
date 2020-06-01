@@ -511,7 +511,7 @@ void Matrix::RandomGaus(float mu, float sigma)
 }
 
 
-std::pair<size_t, size_t> Matrix::Dimension()
+std::pair<size_t, size_t> Matrix::Dimension() const
 {
     // return matrix dimension
     return std::make_pair<size_t, size_t>(__M.size(), __M[0].size());
@@ -553,11 +553,11 @@ void Matrix::operator()(float(*functor)(float), size_t r1, size_t r2, size_t c1,
     }
 }
 
-Matrix Matrix::Reshape(size_t m, size_t n)
+Matrix Matrix::Reshape(size_t m, size_t n) const
 {
     // reshape matrix from original (p, q) to (m, n)
     size_t p = this->size();
-    size_t q = (*this)[0].size();
+    size_t q = (*(const_cast<Matrix*>(this)))[0].size();
     size_t T = p*q; // total # of elements
 
     if(m==0 || n==0 || p==0 || q==0 || T != m*n) {
@@ -570,7 +570,7 @@ Matrix Matrix::Reshape(size_t m, size_t n)
         size_t new_x = i/n, new_y = i%n;
 	size_t old_x = i/q, old_y = i%q;
 
-	res[new_x][new_y] = (*this)[old_x][old_y];
+	res[new_x][new_y] = (*(const_cast<Matrix*>(this)))[old_x][old_y];
     }
 
     return res;

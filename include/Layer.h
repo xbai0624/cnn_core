@@ -147,7 +147,7 @@ struct Images
         return OutputImageFromKernel.size();
     }
 
-    Images ReshapeKernels(size_t I, size_t J)
+    Images ReshapeKernels(size_t I, size_t J) const
     {
         // reshape matrix from different kernels
 	assert(OutputImageFromKernel.size() > 0);
@@ -162,7 +162,7 @@ struct Images
 	return res;
     }
 
-    Images Vectorization()
+    Images Vectorization() const
     {
         // combine outputs from all kernels into a one-collum matrix
 	// this is for feedforward from 2D layer to 1D layer 
@@ -176,7 +176,7 @@ struct Images
 	return tmp;
     }
 
-    Images Tensorization(size_t I, size_t J)
+    Images Tensorization(size_t I, size_t J) const
     {
         // this is the inverse operation for vectorization
 	// used for backward propagation, 1D layer to 2D layer
