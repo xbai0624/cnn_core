@@ -74,6 +74,12 @@ void UnitTest::TestMatrix()
 
     float v = m.MaxInSectionWithPadding(2, 6, 2, 6);
     cout<<v<<endl;
+
+    cout<<"Test average in section with padding."<<endl;
+    Matrix mm(4, 4, 1);
+    cout<<mm<<endl;
+    float vv = mm.AverageInSectionWithPadding(0, 6, 1, 6);
+    cout<<vv<<endl;
 }
 
 

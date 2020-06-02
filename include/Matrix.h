@@ -99,8 +99,10 @@ public:
     float MaxInSectionWithPadding(size_t, size_t, size_t, size_t, float padding_value = -9.e10);
     // average in section
     float AverageInSection(size_t, size_t, size_t, size_t);
+    float AverageInSectionWithPadding(size_t, size_t, size_t, size_t);
     // average in section
     float SumInSection(size_t, size_t, size_t, size_t);
+    float SumInSectionWithPadding(size_t, size_t, size_t, size_t);
     // padding matrix
     Matrix Padding(size_t, size_t, bool pad_front=true, float padding_value=0); // padding matrix
     // correlation

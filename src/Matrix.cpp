@@ -930,6 +930,43 @@ float Matrix::SumInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
     return res;
 }
 
+float Matrix::SumInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+{
+    // find element sum in section [i_start, i_end), and [j_start, j_end)
+    // in this code, we all follow the rule: close front and open end
+    // and all counters start from 0
+    auto dim = Dimension();
+    bool one_hit = false;
+
+    assert((int)i_start >= 0 && i_end > i_start);
+    assert((int)j_start >= 0 && j_end > j_start);
+
+    auto in_range = [&](size_t ii, size_t jj) -> bool
+    {
+        if((int)ii>=0 && ii<dim.first && (int)jj>=0 && jj<dim.second)
+	    return true;
+	return false;
+    };
+
+    float res =  0;
+    for(size_t i=i_start;i<i_end;i++){
+	for(size_t j=j_start;j<j_end;j++)
+	{
+	    if(! in_range(i, j)) continue;
+	    one_hit = true;
+
+	    res += __M[i][j];
+	}
+    }
+
+    if(!one_hit)
+    {
+	std::cout<<"Error: Sum in matrix section with padding: all elements exceeded range."<<std::endl;
+	exit(0);
+    }
+
+    return res;
+}
 
 
 float Matrix::AverageInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
@@ -949,9 +986,54 @@ float Matrix::AverageInSection(size_t i_start, size_t i_end, size_t j_start, siz
 	}
     }
 
-    res = res / (i_end-i_start)/(j_end - j_start); 
+    res = res /(float)(i_end-i_start)/(float)(j_end - j_start); 
     return res;
 }
+
+
+float Matrix::AverageInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+{
+    // find element average in section [i_start, i_end), and [j_start, j_end)
+    // in this code, we all follow the rule: close front and open end
+    // and all counters start from 0
+    auto dim = Dimension();
+    bool one_hit = false;
+
+    assert((int)i_start >= 0 && i_end > i_start);
+    assert((int)j_start >= 0 && j_end > j_start);
+
+    auto in_range = [&](size_t ii, size_t jj) -> bool
+    {
+        if((int)ii>=0 && ii<dim.first && (int)jj>=0 && jj<dim.second)
+	    return true;
+	return false;
+    };
+
+    size_t x_range = i_end < dim.first ? i_end : dim.first;
+    size_t y_range = j_end < dim.second? j_end : dim.second;
+
+    float res =  0;
+    for(size_t i=i_start;i<x_range;i++){
+	for(size_t j=j_start;j<y_range;j++)
+	{
+	    if(!in_range(i, j)) continue;
+	    one_hit = true;
+
+	    res += __M[i][j];
+	}
+    }
+
+    if(!one_hit)
+    {
+	std::cout<<"Error: Average in matrix section with padding: all elements exceeded range."<<std::endl;
+	exit(0);
+    }
+
+
+    res = res / (int)(x_range-i_start)/(int)(y_range - j_start); 
+    return res;
+}
+
 
 Matrix Matrix::Rot_180()
 {

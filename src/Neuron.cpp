@@ -290,7 +290,7 @@ void Neuron::UpdateZPooling(int sample_index)
     } 
     else if(__poolingMethod == PoolingMethod::Average) 
     {
-	z = kernel_image.AverageInSection(i_start, i_start + i_size, j_start, j_start+j_size);
+	z = kernel_image.AverageInSectionWithPadding(i_start, i_start + i_size, j_start, j_start+j_size);
     }
     else 
     {
