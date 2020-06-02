@@ -286,7 +286,7 @@ void Neuron::UpdateZPooling(int sample_index)
     double z;
     if(__poolingMethod == PoolingMethod::Max) 
     {
-	z = kernel_image.MaxInSection(i_start, i_start + i_size, j_start, j_start+j_size);
+	z = kernel_image.MaxInSectionWithPadding(i_start, i_start + i_size, j_start, j_start+j_size);
     } 
     else if(__poolingMethod == PoolingMethod::Average) 
     {
@@ -661,7 +661,7 @@ void Neuron::UpdateDeltaCNN(int sample_index)
 	// multiply  sigma_prime
 	delta_for_current_neuron_in_current_sample = tmp * _sigma_prime;
     }
-    else if(__nextLayer->GetType() != LayerType::pooling)
+    else if(__nextLayer->GetType() == LayerType::pooling)
     {
         // next layer is pooling 
 	// number of  delta images from next layer should = number of kernels in this layer
@@ -689,7 +689,7 @@ void Neuron::UpdateDeltaCNN(int sample_index)
 	    Matrix & image_current_kernel = images_in_current_layer.OutputImageFromKernel[__coord.k];
 
             // get the max element in the covered section
-	    float max_a_sec = image_current_kernel.MaxInSection(x_coord_in_pooling*k_dim.first, (x_coord_in_pooling+1)*k_dim.first,
+	    float max_a_sec = image_current_kernel.MaxInSectionWithPadding(x_coord_in_pooling*k_dim.first, (x_coord_in_pooling+1)*k_dim.first,
 		    y_coord_in_pooling*k_dim.second, (y_coord_in_pooling+1)*k_dim.second);
             
 	    float a_current_neuron = __a[sample_index];
@@ -710,7 +710,7 @@ void Neuron::UpdateDeltaCNN(int sample_index)
 	    exit(0);
 	}
 
-	cout<<"pooling->cnn backpropagation: to be tested..."<<endl;
+	//cout<<"pooling->cnn backpropagation: to be tested..."<<endl;
     }
     else
     {
@@ -804,7 +804,7 @@ void Neuron::UpdateDeltaPooling(int sample_index)
 	// multiply  sigma_prime
 	delta_for_this_neuron = tmp * _sigma_prime;
     }
-    else if(__nextLayer->GetType() != LayerType::pooling)
+    else if(__nextLayer->GetType() == LayerType::pooling)
     {
         // next layer is also pooling : pooling->pooling (not practical, implement for code completeness)
 	// number of  delta images from next layer should = number of kernels in this layer

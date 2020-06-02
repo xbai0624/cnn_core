@@ -864,6 +864,52 @@ float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
     return res;
 }
 
+float Matrix::MaxInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end, float padding_value)
+{
+    // find max element in section [i_start, i_end), and [j_start, j_end)
+    // in this code, we all follow the rule: close front and open end
+    // and all counters start from 0
+    //
+    // if range exceeded matirx dimension, then use padding value 
+    auto dim = Dimension();
+    bool at_least_one_element_in_range = false;
+
+    assert((int)i_start >= 0 && i_end > i_start);
+    assert((int)j_start >= 0 && j_end > j_start);
+
+    auto in_range = [&](size_t ii, size_t jj) -> bool
+    {
+        if((int)ii>=0 && ii<dim.first && (int)jj>=0 && jj<dim.second)
+	    return true;
+	return false;
+    };
+
+    float res = 0.;
+    if(in_range(i_start, j_start))
+	res = __M[i_start][j_start];
+    else
+	res = padding_value;
+
+    for(size_t i=i_start;i<i_end;i++) {
+	for(size_t j=j_start;j<j_end;j++)
+	{
+	    if(! in_range(i, j)) continue;
+	    at_least_one_element_in_range = true;
+
+	    if(res < __M[i][j])
+		res = __M[i][j];
+	}
+    }
+    if(!at_least_one_element_in_range)
+    {
+	std::cout<<"Error: Max in matrix section: all elements exceeded range."<<std::endl;
+	exit(0);
+    }
+
+    return res;
+}
+
+
 float Matrix::SumInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
 {
     // find element sum in section [i_start, i_end), and [j_start, j_end)

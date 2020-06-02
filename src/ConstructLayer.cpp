@@ -26,12 +26,18 @@ ConstructLayer::ConstructLayer(LayerParameterList p_list)
 {
     // common parameters
     __type = p_list._gLayerType;
+
     // drop out
     if(p_list._gUseDropout)
     {
         EnableDropOut();
         SetDropOutFactor(p_list._gDropoutFactor);
     }
+    else
+    {
+        DisableDropOut();
+    }
+
     SetLearningRate(p_list._gLearningRate);
     __layerDimension = p_list._gLayerDimension;
     __p_data_interface = p_list._pDataInterface;
@@ -220,9 +226,10 @@ void  ConstructLayer::SetNumberOfKernelsCNN(size_t n)
 
 void  ConstructLayer::SetKernelSizeCNN(std::pair<size_t, size_t> s)
 {
-    if(__type != LayerType::cnn)
+    // pooling layer also borrowed this function
+    if(__type != LayerType::cnn && __type != LayerType::pooling)
     {
-	std::cout<<"Error: needs to set layer type before setting kernel size."
+	std::cout<<__func__<<" Error: needs to set layer type before setting kernel size."
 	    <<std::endl;
 	exit(0);
     }
@@ -497,7 +504,7 @@ void ConstructLayer::InitFilters()
 	Filter2D f(dim.first, dim.second); // default to true
 	__activeFlag.push_back(f);
     }
-    else if(__type == LayerType::cnn)
+    else if(__type == LayerType::cnn || __type == LayerType::pooling)
     {
 	size_t nKernels = __weightMatrix.size();
 	for(size_t i=0;i<nKernels;i++)
@@ -1195,7 +1202,7 @@ void ConstructLayer::AssignWeightsAndBiasToNeurons()
 	    active_i++;
 	}
     }
-    else if(__type == LayerType::cnn)
+    else if(__type == LayerType::cnn || __type == LayerType::pooling)
     {
 	size_t nKernel = __weightMatrixActive.size();
 	assert(__neurons.size() == nKernel); // layers must match
@@ -1224,7 +1231,7 @@ void ConstructLayer::DropOut()
 {
     if(__type == LayerType::fullyConnected)
 	__UpdateActiveFlagFC();
-    else if(__type == LayerType::cnn)
+    else if(__type == LayerType::cnn || __type == LayerType::pooling)
 	__UpdateActiveFlagCNN();
     else 
     {
@@ -1235,11 +1242,13 @@ void ConstructLayer::DropOut()
 
 void ConstructLayer::EnableDropOut()
 {
+    //cout<<"debug layer id: "<<GetID()<<", enabling drop out."<<endl;
     __use_drop_out = true;
 }
 
 void ConstructLayer::DisableDropOut()
 {
+    //cout<<"debug layer id: "<<GetID()<<", disabling drop out."<<endl;
     __use_drop_out = false;
 }
 
@@ -1395,7 +1404,7 @@ void ConstructLayer::TransferValueFromActiveToOriginal_WB()
     // start transfer
     for(size_t i=0;i<nKernels;i++)
     {
-	if(__type == LayerType::cnn) {
+	if(__type == LayerType::cnn || __type == LayerType::pooling) {
 	    active_to_original_cnn(__weightMatrix[i], __activeFlag[i], __weightMatrixActive[i]);
 	}
 	else if(__type == LayerType::fullyConnected || __type == LayerType::output)
@@ -1414,7 +1423,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 {
     size_t nKernel = __weightMatrix.size();
     assert(nKernel == __biasVector.size());
-    if(__type == LayerType::cnn) 
+    if(__type == LayerType::cnn || __type == LayerType::pooling) 
 	assert(nKernel == __activeFlag.size());
 
     // a lambda funtion for cnn layer mapping original w&b matrix to active w&b matrix
@@ -1486,7 +1495,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
     };
 
     // start mapping
-    if(__type == LayerType::cnn)
+    if(__type == LayerType::cnn || __type == LayerType::pooling)
     {
 	for(size_t k=0; k<nKernel;k++)
 	{
@@ -1501,7 +1510,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
     }
 
     // update active neuron coord after drop out
-    if(__type == LayerType::cnn)
+    if(__type == LayerType::cnn || __type == LayerType::pooling)
     {
 	__activeNeuronDim = __neuronDim; // drop out not happening on neurons, so dimension stays same
     }

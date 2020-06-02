@@ -96,6 +96,7 @@ public:
     float ElementSum();
     // max element in section
     float MaxInSection(size_t, size_t, size_t, size_t);
+    float MaxInSectionWithPadding(size_t, size_t, size_t, size_t, float padding_value = -9.e10);
     // average in section
     float AverageInSection(size_t, size_t, size_t, size_t);
     // average in section

@@ -13,6 +13,7 @@ public:
     void Test();
 
     void TestImagesStruct();
+    void TestMatrix();
 
 private:
     // reserved

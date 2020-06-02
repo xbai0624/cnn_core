@@ -19,6 +19,7 @@ UnitTest::~UnitTest()
 void UnitTest::Test()
 {
     TestImagesStruct();
+    TestMatrix();
 }
 
 
@@ -61,3 +62,18 @@ void UnitTest::TestImagesStruct()
     for(auto &i: tensor_image.OutputImageFromKernel)
         cout<<i<<endl<<endl;
 }
+
+
+void UnitTest::TestMatrix()
+{
+    Matrix m(4, 4);
+    m.Random();
+
+    cout<<"Test Matrix."<<endl;
+    cout<<m<<endl;
+
+    float v = m.MaxInSectionWithPadding(2, 6, 2, 6);
+    cout<<v<<endl;
+}
+
+

@@ -30,12 +30,12 @@ void Network::Init()
 
 void Network::ConstructLayers()
 {
-    // Network structure: {Image->Input->CNN->CNN->pooling->FC->FC->Output}
+    // Network structure: {Image->Input->CNN->pooling->CNN->pooling->FC->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
     DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D);
 
-    // 3) input layer
+    // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
 	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0);
     Layer* layer_input = new ConstructLayer(p_list0);
@@ -43,38 +43,53 @@ void Network::ConstructLayers()
     //       because Initialization rely on data_interface
     layer_input->Init();
 
-    // 4) middle layer 3 : cnn layer
+    // 4) middle layer 3 : cnn layer ID=1
     LayerParameterList p_list4(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
 	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1);
     Layer *l2 = new ConstructLayer(p_list4);
     l2->SetPrevLayer(layer_input);
     l2->Init();
- 
+  
+    // 4) middle layer 2 : pooling layer ID=2
+    LayerParameterList p_list7(LayerType::pooling, LayerDimension::_2D, data_interface, 0, 3, 
+	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0.);
+    Layer *l5 = new ConstructLayer(p_list7);
+    l5->SetPrevLayer(l2);
+    l5->Init();
 
-    // 4) middle layer 2 : cnn layer
+
+    // 4) middle layer 2 : cnn layer ID=3
     LayerParameterList p_list3(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
 	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1);
     Layer *l1 = new ConstructLayer(p_list3);
-    l1->SetPrevLayer(l2);
+    l1->SetPrevLayer(l5);
     l1->Init();
 
  
-    // 4) middle layer 1 : fc layer
+    // 4) middle layer 2 : pooling layer ID=4
+    LayerParameterList p_list6(LayerType::pooling, LayerDimension::_2D, data_interface, 0, 3, 
+	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0.);
+    Layer *l4 = new ConstructLayer(p_list6);
+    l4->SetPrevLayer(l1);
+    l4->Init();
+
+
+    // 4) middle layer 1 : fc layer ID=5
     LayerParameterList p_list5(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 40, 0, 
 	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1);
     Layer *l3 = new ConstructLayer(p_list5);
-    l3->SetPrevLayer(l1);
+    l3->SetPrevLayer(l4);
     l3->Init();
 
  
-    // 4) middle layer 1 : fc layer
+    // 4) middle layer 1 : fc layer ID=7
     LayerParameterList p_list1(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 20, 0, 
 	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1);
     Layer *l0 = new ConstructLayer(p_list1);
     l0->SetPrevLayer(l3);
     l0->Init();
 
-    // 5) output layer
+    // 5) output layer ID = 7
     LayerParameterList p_list2(LayerType::output, LayerDimension::_1D, data_interface, 2, 0, 
 	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0., Regularization::L2, 0.1);
     Layer* layer_output = new ConstructLayer(p_list2);
@@ -82,8 +97,12 @@ void Network::ConstructLayers()
     layer_output -> Init();
 
     // 6) connect all layers; SetNextLayer must be after all layers have finished initialization
-    l2->SetNextLayer(l1);
-    l1->SetNextLayer(l3);
+    //                        input layer not needed to set, input layer has no update on w & b
+    //                        input layer is just for data transfer (prepare)
+    l2->SetNextLayer(l5);
+    l5->SetNextLayer(l1);
+    l1->SetNextLayer(l4);
+    l4->SetNextLayer(l3);
     l3->SetNextLayer(l0);
     l0->SetNextLayer(layer_output); // This line is ugly, to be improved
 
@@ -91,7 +110,9 @@ void Network::ConstructLayers()
     __inputLayer = layer_input;
     __outputLayer = layer_output;
     __middleLayers.push_back(l2); // must be pushed in order
+    __middleLayers.push_back(l5); // must be pushed in order
     __middleLayers.push_back(l1);
+    __middleLayers.push_back(l4);
     __middleLayers.push_back(l3);
     __middleLayers.push_back(l0);
     __dataInterface = data_interface;
@@ -117,7 +138,6 @@ void Network::UpdateEpoch()
     for(auto &i: __middleLayers)
     {
 	i->EpochInit();
-	i->EnableDropOut();
     }
     __outputLayer->EpochInit();  // output layer no dropout
 
