@@ -30,7 +30,7 @@ void Network::Init()
 
 void Network::ConstructLayers()
 {
-    // Network structure: {Image->Input->CNN->pooling->FC->FC->Output}
+    // Network structure: {Image->Input->CNN->CNN->pooling->FC->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
     DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D);
@@ -57,12 +57,21 @@ void Network::ConstructLayers()
     Layer *l1 = new ConstructLayer(p_list3);
     l1->SetPrevLayer(l2);
     l1->Init();
+
  
-    // 4) middle layer 1
+    // 4) middle layer 1 : fc layer
+    LayerParameterList p_list5(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 40, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1);
+    Layer *l3 = new ConstructLayer(p_list5);
+    l3->SetPrevLayer(l1);
+    l3->Init();
+
+ 
+    // 4) middle layer 1 : fc layer
     LayerParameterList p_list1(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 20, 0, 
 	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1);
     Layer *l0 = new ConstructLayer(p_list1);
-    l0->SetPrevLayer(l1);
+    l0->SetPrevLayer(l3);
     l0->Init();
 
     // 5) output layer
@@ -74,7 +83,8 @@ void Network::ConstructLayers()
 
     // 6) connect all layers; SetNextLayer must be after all layers have finished initialization
     l2->SetNextLayer(l1);
-    l1->SetNextLayer(l0);
+    l1->SetNextLayer(l3);
+    l3->SetNextLayer(l0);
     l0->SetNextLayer(layer_output); // This line is ugly, to be improved
 
     // 7) save all constructed layers
@@ -82,13 +92,14 @@ void Network::ConstructLayers()
     __outputLayer = layer_output;
     __middleLayers.push_back(l2); // must be pushed in order
     __middleLayers.push_back(l1);
+    __middleLayers.push_back(l3);
     __middleLayers.push_back(l0);
     __dataInterface = data_interface;
 }
 
 void Network::Train()
 {
-    __numberOfEpoch = 1; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+    __numberOfEpoch = 2; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
     for(int i=0;i<__numberOfEpoch;i++)
     {
         std::cout<<"[------]Number of epoch: "<<i<<"/"<<__numberOfEpoch<<endl;

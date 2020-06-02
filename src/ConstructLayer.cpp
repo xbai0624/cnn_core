@@ -467,7 +467,7 @@ void ConstructLayer::InitFilters()
 	{
 	    assert(__neurons.size() == 1); // only one kernel
 	    auto dim = __neurons[0].Dimension();
-	    Filter2D f(dim.first, dim.second);
+	    Filter2D f(dim.first, dim.second); // default to true
 	    __activeFlag.push_back(f);
 	}
 	else if(__layerDimension == LayerDimension::_2D)
@@ -478,7 +478,7 @@ void ConstructLayer::InitFilters()
 	    // since filters in 2D middle layers are not used, so it is safe to code like 1D case
 	    assert(__neurons.size() == 1); // only one kernel
 	    auto dim = __neurons[0].Dimension(); // for 2D layer, the fake neurons has also been initialized
-	    Filter2D f(dim.first, dim.second);
+	    Filter2D f(dim.first, dim.second); // default to true
 	    __activeFlag.push_back(f);
 	}
     }
@@ -487,14 +487,14 @@ void ConstructLayer::InitFilters()
 	assert(__neurons.size() == 1); // only one kernel
 	auto dim = __neurons[0].Dimension();
 	assert(dim.second == 1); // only one collum
-	Filter2D f(dim.first, dim.second);
+	Filter2D f(dim.first, dim.second); // default to true
 	__activeFlag.push_back(f);
     }
     else if(__type == LayerType::fullyConnected)
     {
 	assert(__neurons.size() == 1);
 	auto dim = __neurons[0].Dimension();
-	Filter2D f(dim.first, dim.second);
+	Filter2D f(dim.first, dim.second); // default to true
 	__activeFlag.push_back(f);
     }
     else if(__type == LayerType::cnn)
@@ -503,7 +503,7 @@ void ConstructLayer::InitFilters()
 	for(size_t i=0;i<nKernels;i++)
 	{
 	    auto dim = __weightMatrix[i].Dimension();
-	    Filter2D f(dim.first, dim.second);
+	    Filter2D f(dim.first, dim.second); // default to true
 	    __activeFlag.push_back(f);
 	}
     }
@@ -994,7 +994,7 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
 	__imageZ[sample_id] = sample_image_Z;
 	__imageZFull[sample_id] = sample_image_Z_full;
     }
-    else if(__type == LayerType::cnn) // for cnn layer
+    else if(__type == LayerType::cnn || __type == LayerType::pooling) // for cnn layer and pooling
     {
 	// for cnn, drop out happens on kernels (weight matrix)
 	// so the neurons are all active
@@ -1026,8 +1026,8 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
     }
     else // for other layer types
     {
-        // Z image is not needed for pooling layer and output layer
-	// only 'A' image and 'Delta' image are needed for output layer and pooling layer
+        // Z image is not needed in layer level for output layer 
+	// only 'A' image and 'Delta' image in layer level are needed for output layer
     }
 }
 
