@@ -19,7 +19,7 @@ Some techniques used for mitigate overfitting have also been implemented,
 such as Drop-out, L2/L1 regularization.
 
 In this library, NN layers are divided into two categories: 
-1-Dimensional (1D) layer and 2D layer, based on the dimension of the output image
+1-Dimensional (1D) layer and 2-Dimensional (2D) layer, based on the dimension of the output image
 of that layer.
 
 For example, fully connected layer is 1-Dimensional, since its neurons are arranged in a collum
