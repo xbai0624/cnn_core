@@ -209,7 +209,7 @@ void  ConstructLayer::SetNumberOfNeuronsFC(size_t n)
 
 void  ConstructLayer::SetNumberOfKernelsCNN(size_t n)
 {
-    if(__type != LayerType::cnn)
+    if(__type != LayerType::cnn && __type != LayerType::pooling)
     {
 	std::cout<<"Error: needs to set layer type before setting number of kernels."
 	    <<std::endl;
@@ -245,6 +245,8 @@ void ConstructLayer::InitNeurons()
 {
     if(__type == LayerType::cnn)
 	InitNeuronsCNN();
+    else if(__type == LayerType::pooling)
+        InitNeuronsPooling();
     else if(__type == LayerType::input)
 	InitNeuronsInputLayer();
     else if(__type == LayerType::fullyConnected)
@@ -294,7 +296,7 @@ void ConstructLayer::InitNeuronsCNN()
     // get output image size of previous layer (input image size for this layer)
     assert(__prevLayer != nullptr);
     auto size_prev_layer = __prevLayer->GetOutputImageSize();
-    //std::cout<<"prev layer output image size: "<<size_prev_layer<<std::endl;
+    //std::cout<<__func__<<" prev layer output image size: "<<size_prev_layer<<std::endl;
 
     int n_row = size_prev_layer.first;
     int n_col = size_prev_layer.second;
@@ -324,6 +326,55 @@ void ConstructLayer::InitNeuronsCNN()
 	    for(size_t j=0;j<__outputImageSizeCNN.second;j++)
 	    {
 		Neuron *n = new Neuron();
+		n->SetCoord(i, j, k); // set neuron coord
+		image[i][j] = n;
+	    }
+	}
+	__neurons.push_back(image);
+    }
+}
+
+void ConstructLayer::InitNeuronsPooling()
+{
+    // clear
+    __neurons.clear();
+
+    // get output image size of previous layer (input image size for this layer)
+    assert(__prevLayer != nullptr);
+    auto size_prev_layer = __prevLayer->GetOutputImageSize();
+    //std::cout<<__func__<<" prev layer output image size: "<<size_prev_layer<<std::endl;
+
+    int n_row = size_prev_layer.first;
+    int n_col = size_prev_layer.second;
+
+    assert(__prevLayer->GetNumberOfKernelsCNN() == __n_kernels_cnn);
+
+    // deduct output image dimension
+    //     !!! NOTE !!! pooling layer is different with cnn layer
+    //     !!!          pooling layer kernel should have no coverage overlap on the input image
+    int x_size = (int)n_row / (int)__kernelDim.first;
+    int y_size = (int)n_col / (int)__kernelDim.second;
+    if(x_size <= 0) x_size = 1; // small images will be complemented by padding
+    if(y_size <= 0) y_size = 1; // so it is safe to set size >= 1
+
+    if((int)n_row%(int)__kernelDim.first != 0) x_size += 1; // residue will be complemented by padding
+    if((int)n_col%(int)__kernelDim.second != 0) y_size += 1; // residue will be complemented by padding
+
+    // pooling layer borrowed variabe '__outputImageSizeCNN', to reduce memory
+    __outputImageSizeCNN.first = x_size;
+    __outputImageSizeCNN.second = y_size;
+    assert(__outputImageSizeCNN.first >=1);
+    assert(__outputImageSizeCNN.second >=1);
+
+    for(size_t k=0;k<__n_kernels_cnn;k++)
+    {
+	Pixel2D<Neuron*> image(__outputImageSizeCNN.first, __outputImageSizeCNN.second);
+	for(size_t i=0;i<__outputImageSizeCNN.first;i++)
+	{
+	    for(size_t j=0;j<__outputImageSizeCNN.second;j++)
+	    {
+		Neuron *n = new Neuron();
+		n->SetCoord(i, j, k); // set neuron coord
 		image[i][j] = n;
 	    }
 	}
@@ -339,6 +390,7 @@ void ConstructLayer::InitNeuronsFC()
     for(size_t i=0;i<__n_neurons_fc;i++)
     {
 	Neuron *n = new Neuron();
+	n->SetCoord(i, 0, 0);
 	image[i][0] = n;
     }
     __neurons.push_back(image);
@@ -351,7 +403,7 @@ void ConstructLayer::InitNeuronsInputLayer()
 
     if(__p_data_interface == nullptr)
     {
-        std::cout<<"Error: must implement/pass DataInterface class before initializing neurons for input layer"
+        std::cout<<__func__<<" Error: must implement/pass DataInterface class before initializing neurons for input layer"
 	         <<std::endl;
         exit(0);
     }
@@ -373,6 +425,7 @@ void ConstructLayer::InitNeuronsInputLayer()
 	    for(size_t j=0;j<dim.second;j++)
 	    {
 		Neuron *n = new Neuron();
+		// n->SetCoord(i, j, k); // input layer neuron does not need coord
 		image[i][0] = n;
 	    }
 	}
@@ -384,8 +437,19 @@ void ConstructLayer::InitNeuronsInputLayer()
     //     its following layers will directly get 'A' images from 2D input layer
     else if(__layerDimension == LayerDimension::_2D)
     {
-        // no operation needed
-	// reserved for now
+        // 2D layers neurons number should equal to dim.first * dim.second
+	size_t total_neurons = dim.first * dim.second;
+	Pixel2D<Neuron*> image(total_neurons, 1);
+	for(size_t i=0;i<total_neurons;i++)
+	{
+	    for(size_t j=0;j<1;j++)
+	    {
+		Neuron *n = new Neuron();
+		// n->SetCoord(i, j, k); // input layer neuron does not need coord
+		image[i][0] = n;
+	    }
+	}
+	__neurons.push_back(image);
     }
 }
 
@@ -408,9 +472,14 @@ void ConstructLayer::InitFilters()
 	}
 	else if(__layerDimension == LayerDimension::_2D)
 	{
-	    // filter in 2D input layer is not used
-	    // b/c its subsequent layer directly get 'A' images from it
-	    // reserved for now
+	    // 2D input layer need a fake filter with dimension (number_of_fake_neurons, 1), similar like 1D
+	    // this is just in case one directly connect a 2D input layer to a 1D fc layer
+	    //
+	    // since filters in 2D middle layers are not used, so it is safe to code like 1D case
+	    assert(__neurons.size() == 1); // only one kernel
+	    auto dim = __neurons[0].Dimension(); // for 2D layer, the fake neurons has also been initialized
+	    Filter2D f(dim.first, dim.second);
+	    __activeFlag.push_back(f);
 	}
     }
     else if(__type == LayerType::output)
@@ -472,12 +541,11 @@ void  ConstructLayer::InitWeightsAndBias()
     }
     else if(__type == LayerType::cnn)
     {
-	auto o_d = GetOutputImageSizeCNN();
-	float n_curr = (float)o_d.first * (float)o_d.second;
+	auto norm_factor = __p_data_interface->GetBatchSize();
 	for(size_t i=0;i<__n_kernels_cnn;i++)
 	{
 	    Matrix w(__kernelDim);
-	    w.RandomGaus(0., 1./sqrt(n_curr));
+	    w.RandomGaus(0., 1./sqrt(norm_factor));
 	    __weightMatrix.push_back(w);
 
 	    Matrix b(1, 1);
@@ -487,6 +555,14 @@ void  ConstructLayer::InitWeightsAndBias()
     }
     else if(__type == LayerType::pooling)
     {
+        for(size_t i=0;i<__n_kernels_cnn;i++) // pooling used cnn symbol
+	{
+	    Matrix w(__kernelDim, 1);
+	    __weightMatrix.push_back(w);
+
+	    Matrix b(1, 1, 0);
+	    __biasVector.push_back(b);
+	}
     }
     else {
 	std::cout<<"Error: need layer type info before initing w&b."<<std::endl;
@@ -526,15 +602,23 @@ void ConstructLayer::BackwardPropagateForSample(int sample_index)
     //     ---) compute delta for this layer
     //     ---) only after all samples in this batch finished forward propagation, one can do this backward propagation
 
-    for(size_t k=0;k<__neurons.size();k++)
-    {
+    for(size_t k=0;k<__neurons.size();k++){
 	auto dim = __neurons[k].Dimension();
-	for(size_t i=0;i<dim.first;i++)
-	{
-	    for(size_t j=0;j<dim.second;j++)
-	    {
-		if(__neurons[k][i][j]->IsActive()){
+	for(size_t i=0;i<dim.first;i++)  {
+	    for(size_t j=0;j<dim.second;j++) {
+		if(__neurons[k][i][j]->IsActive())
+		{
 		    __neurons[k][i][j] -> BackwardPropagateForSample(sample_index);
+		    /*
+		    if(__type == LayerType::fullyConnected)
+		    {
+			cout<<__func__<<" fc layer neuron coord: "<<__neurons[k][i][j]->GetCoord()<<endl;
+		    }
+		    else if(__type == LayerType::cnn)
+		    {
+			cout<<__func__<<" cnn layer neuron coord: "<<__neurons[k][i][j]->GetCoord()<<endl;
+		    }
+		    */
 		}
 	    }
 	}
@@ -817,7 +901,7 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 	__imageA[sample_id] = sample_image_A;
 	__imageAFull[sample_id] = sample_image_A_full;
     }
-    else if(__type == LayerType::cnn) // for cnn layer
+    else if(__type == LayerType::cnn || __type == LayerType::pooling ) // for cnn layer and pooling layer
     {
 	// for cnn, drop out happens on kernels (weight matrix)
 	// so the neurons are all active
@@ -847,7 +931,7 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 	__imageA[sample_id] = sample_image_A;
 	__imageAFull[sample_id] = sample_image_A;
     }
-    else // for other layer types
+    else // reserved for other layer types
     {
     }
 }
@@ -942,6 +1026,8 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
     }
     else // for other layer types
     {
+        // Z image is not needed for pooling layer and output layer
+	// only 'A' image and 'Delta' image are needed for output layer and pooling layer
     }
 }
 
@@ -961,17 +1047,19 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 {
     // __imageDelta shold only store images from all active neurons, the matching info can be achieved from filter matrix
     //    drop out only happens on batch level
-    //    so imageZ will clear after each batch is done
+    //    so imageDelta will clear after each batch is done
     //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix on batch level
     //
-    //    The above comment is copied from UpdateImagesZ(); just to refresh your memory, no use in this function
+    //    The above comment is copied from UpdateImagesZ(); just to refresh memory, no use in this function
     //
 
-    // extract the A matrices from neurons for current traning sample
+    // extract the Delta matrices from neurons for current traning sample
     Images sample_image_delta;
     Images sample_image_delta_full;
 
-    if(__type == LayerType::fullyConnected) // for fully connected layer
+    // !!! Note:: !!! delta for output layer is updated in ComputeCostInOutputLayerForCurrentSample(int) function
+    //                no need to do it here
+    if(__type == LayerType::fullyConnected) // for fully connected layer, 
     {
 	for(size_t k=0;k<__neuronDim.k;k++) // kernel
 	{
@@ -1010,7 +1098,7 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 	__imageDelta[sample_index] = sample_image_delta;
 	__imageDeltaFull[sample_index] = sample_image_delta_full;
     }
-    else if(__type == LayerType::cnn) // for cnn layer
+    else if(__type == LayerType::cnn || __type == LayerType::pooling) // for cnn layer and pooling layer
     {
 	// for cnn, drop out happens on kernels (weight matrix)
 	// so the neurons are all active
@@ -1040,7 +1128,7 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 	__imageDelta[sample_index] = sample_image_delta;
 	__imageDeltaFull[sample_index] = sample_image_delta_full;
     }
-    else // for other layer types
+    else // reserved for other layer types
     {
     }
 }
@@ -1779,7 +1867,8 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     if(__prevLayer->GetType() == LayerType::input) // only fc layer, other layers won't affect
     {
 	auto prevLayerFilters = __prevLayer->GetActiveFlag();
-	assert(prevLayerFilter.size() == 1);
+	assert(prevLayerFilters.size() == 1);
+	assert(prevLayerFilters[0].Dimension().first == (size_t)__prevLayer->GetNumberOfNeurons());
 
 	Matrix filter = convertFilterToMatrix(prevLayerFilters[0]);
 	prevLayerFilter = filter.Transpose();
@@ -2034,6 +2123,8 @@ std::pair<size_t, size_t> ConstructLayer::GetOutputImageSize()
 	return GetOutputImageSizeFC();
     else if(__type == LayerType::cnn)
 	return GetOutputImageSizeCNN();
+    else if(__type == LayerType::input)
+        return GetOutputImageSizeInputLayer();
     else
 	return GetOutputImageSizeCNN();
 }
@@ -2050,6 +2141,17 @@ std::pair<size_t, size_t> ConstructLayer::GetOutputImageSizeFC()
     return std::pair<size_t, size_t>(__n_neurons_fc, 1);
 }
 
+std::pair<size_t, size_t> ConstructLayer::GetOutputImageSizeInputLayer()
+{
+    // used for setup first cnn layer
+    // directly get dimension from DataInterface 
+    auto dim = __p_data_interface->GetDataDimension();
+
+    // directly return image dimension
+    return dim;
+}
+
+
 int ConstructLayer::GetNumberOfNeurons()
 {
     if(__type == LayerType::fullyConnected || __type == LayerType::output ) // output layer is also a fully connected layer
@@ -2062,6 +2164,11 @@ int ConstructLayer::GetNumberOfNeurons()
 	auto dim = __neurons[0].Dimension();
 	return static_cast<int>((dim.first * dim.second));
     }
+    else if(__type == LayerType::cnn || __type == LayerType::pooling)
+    {
+	auto dim = GetOutputImageSize();
+	return static_cast<int>((dim.first * dim.second * __n_kernels_cnn));
+    }
     else
     {
 	std::cout<<"Warning: GetNumberOfNeurons only work for fc and input layer."<<std::endl;
@@ -2073,6 +2180,18 @@ int ConstructLayer::GetNumberOfNeuronsFC()
 {
     // used for setup fc layer
     return __n_neurons_fc;
+}
+
+size_t ConstructLayer::GetNumberOfKernelsCNN()
+{
+    // note: both cnn layer and pooling layer use this function
+    return __n_kernels_cnn;
+}
+
+std::pair<size_t, size_t> ConstructLayer::GetKernelDimensionCNN()
+{
+    // note: both cnn layer and pooling layer use this function; to save memory
+    return __kernelDim;
 }
 
 

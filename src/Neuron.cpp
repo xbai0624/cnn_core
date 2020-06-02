@@ -133,17 +133,17 @@ void Neuron::UpdateZ(int sample_index)
     // update z for current layer
     if(__layer->GetType() == LayerType::fullyConnected || __layer->GetType() == LayerType::output)
     {
-	//std::cout<<"fully connected layer update z"<<std::endl;
+	//std::cout<<__func__<<" fully connected layer update z"<<std::endl;
 	UpdateZFC(sample_index);
     } 
     else if(__layer->GetType() == LayerType::cnn)
     {
-	//std::cout<<"cnn layer update z"<<std::endl;
+	//std::cout<<__func__<<" cnn layer update z"<<std::endl;
 	UpdateZCNN(sample_index);
     } 
     else if(__layer->GetType() == LayerType::pooling)
     {
-	//std::cout<<"pooling layer update z"<<std::endl;
+	//std::cout<<__func__<<" pooling layer update z"<<std::endl;
 	UpdateZPooling(sample_index);
     } 
     else 
@@ -155,12 +155,9 @@ void Neuron::UpdateZ(int sample_index)
 
 void Neuron::UpdateZFC(int sample_index)
 {
-    // for fully connected layer, matrix reform are done by Layer class
-    // currently layer and its previous layer are fully connected
-    // weight matrix dimension will be: (1, M)
+    // for fully connected layer, matrix reform are also done in here
     Layer* __previousLayer = __layer->GetPrevLayer();
     std::vector<Images>& _t = __previousLayer -> GetImagesActiveA(); // this line with '&' is 5 times faster than the following line without '&'
-    //std::vector<Images> _t = __previousLayer -> GetImagesActiveA();
 
     //cout<<"batch size: "<<_t.size()<<endl;
     //cout<<"kernel number: "<<_t[0].GetNumberOfKernels()<<endl;
@@ -172,6 +169,8 @@ void Neuron::UpdateZFC(int sample_index)
     }
     //Images &images = _t[sample_index]; // get images for current sample
 
+
+    double z_for_current_neuron = 0;
     // get images for current sample
     Images images;
     if(__previousLayer->GetType() != LayerType::fullyConnected/* && __previousLayer->GetType() != LayerType::input*/ )
@@ -197,7 +196,7 @@ void Neuron::UpdateZFC(int sample_index)
     //cout<<image<<endl;
 
 
-    //cout<<"weight matrix dimension: "<<(*__w).Dimension()<<endl;
+    //cout<<__func__<<" CHECKING HERE!!!! weight matrix dimension: "<<(*__w).Dimension()<<endl;
     //cout<<(*__w)<<endl;
     Matrix res = (*__w) * image;
     //cout<<"res matrix: "<<endl;
@@ -207,11 +206,13 @@ void Neuron::UpdateZFC(int sample_index)
     {
 	std::cout<<"Error: wrong dimension, expecting 1D matrix."<<std::endl;
     }
-    double z = res[0][0];
-    z = z + (*__b)[0][0];
+    z_for_current_neuron = res[0][0];
 
-    //__z.push_back(z);
-    __z[sample_index] = z;
+    z_for_current_neuron = z_for_current_neuron + (*__b)[0][0];
+
+    __z[sample_index] = z_for_current_neuron;
+
+    //cout<<__func__<<" finished."<<endl;
 }
 
 void Neuron::UpdateZCNN(int sample_index)
@@ -219,7 +220,8 @@ void Neuron::UpdateZCNN(int sample_index)
     // cnn layer
     // every single output image needs input from all input images
     Layer *__previousLayer = __layer->GetPrevLayer();
-    auto inputImage = __previousLayer->GetImagesActiveA(); // no tensorization needed; b/c "fc->cnn" type connection is not used at the moment
+    auto & inputImage = __previousLayer->GetImagesActiveA(); // no tensorization needed; b/c "fc->cnn" type connection is not used at the moment
+
     auto w_dim = __w->Dimension();
     int stride = __layer->GetCNNStride();
 
@@ -248,7 +250,6 @@ void Neuron::UpdateZCNN(int sample_index)
 	}
     }
     double z = res + (*__b)[0][0];
-    //__z.push_back(z);
     __z[sample_index] = z;
 }
 
@@ -257,7 +258,7 @@ void Neuron::UpdateZPooling(int sample_index)
     // pooling layer
     // should be with cnn layer, just kernel matrix all elements=1, bias = 0;
     Layer* __previousLayer = __layer->GetPrevLayer();
-    auto inputImage = __previousLayer->GetImagesActiveA(); // no tensorization needed, b/c "fc->pooling" type connection is not used at the moment
+    auto & inputImage = __previousLayer->GetImagesActiveA(); // no tensorization needed, b/c "fc->pooling" type connection is not used at the moment
     //if(inputImage.back().OutputImageFromKernel.size() < __coord.k)
     if(inputImage[sample_index].OutputImageFromKernel.size() < __coord.k)
     {
@@ -269,9 +270,9 @@ void Neuron::UpdateZPooling(int sample_index)
 	exit(0);
     }
     //Images image = inputImage.back(); // images for current training sample
-    Images image = inputImage[sample_index]; // images for current training sample
+    Images & image = inputImage[sample_index]; // images for current training sample
     std::vector<Matrix> & images = image.OutputImageFromKernel;
-    Matrix &kernel_image = images[__coord.k];
+    Matrix & kernel_image = images[__coord.k];
 
     // get pooling stride
     auto dim = __w->Dimension();
@@ -542,9 +543,27 @@ void Neuron::UpdateDeltaFC(int sample_index)
     //cout<<"here..... Neuron::UpdateDeltaFC()   end"<<endl;
 }
 
+static std::pair<size_t, size_t> mappedCoordsInVector(const std::pair<size_t, size_t> &kernel_dim, const NeuronCoord & coord)
+{
+    // background: after vectorization, tensors will be formed into a big vector
+    //   each element in tensors will have a corresponding coord in the vector
+    //
+    // this function return the correspoinding coordinates in that vector
+
+    size_t total_elements_in_kernel = kernel_dim.first * kernel_dim.second;
+    // nth_kernel should start from 0
+    size_t i = coord.k * total_elements_in_kernel + coord.i * kernel_dim.first + coord.j;
+
+    // vector has only one collum, so j = 0
+    return std::pair<size_t, size_t>(i, 0);
+}
+
 void Neuron::UpdateDeltaCNN(int sample_index)
 {
     // back propagate delta for cnn layer
+    float delta_for_current_neuron_in_current_sample = 0.; // save results.
+
+    // sigma prime of current neuron in current sample
     if(__sigmaPrime.size()<=0)
     {
 	std::cout<<"Error: computing delta needs sigma^prime computed first."<<std::endl;
@@ -552,64 +571,156 @@ void Neuron::UpdateDeltaCNN(int sample_index)
     }
     double _sigma_prime = __sigmaPrime[sample_index];
 
+    // next layer delta images
     Layer* __nextLayer = __layer->GetNextLayer();
     std::vector<Images> & deltaVecNext = __nextLayer->GetImagesActiveDelta(); // for 2D layer, images are all active, drop out happens on kernel
- 
-    auto weightVecNext = __nextLayer->GetWeightMatrix();
 
-    //Images &image_next_layer = deltaVecNext[sample_index]; // delta from next layer for current training sample
+    // next layer weight matrix
+    //auto weightVecNext = __nextLayer->GetWeightMatrix(); // obsolete, moved into subsection
 
-    Images image_next_layer; // delta from next layer for current training sample
+    // output image size for current layer
     auto output_image_size_for_current_layer = __layer->GetOutputImageSize();
+
     if(__nextLayer->GetType() != LayerType::cnn && __nextLayer->GetType() != LayerType::pooling)
     {
-        // next layer is a 1D layer, needs tensorization for back propagation
-	//        to get back the orignal dimension
-	//        !!! NOTE !!! 2D->1D or 1D->2D has no dimension reduction operation (Dimension reduction only happens on 2D->2D and 1D->1D)
-	//        so it is safe to use Tensorization()
-	image_next_layer = deltaVecNext[sample_index].Tensorization(output_image_size_for_current_layer.first, output_image_size_for_current_layer.second);
-    } 
-    else 
-    {
-        // next layer is a 2D layer, no extra operation needed
-	image_next_layer = deltaVecNext[sample_index];
-    }
-    std::vector<Matrix> & vec_delta_image = image_next_layer.OutputImageFromKernel;
+        // next layer is fc or output, 1 dimensional
+	assert(deltaVecNext[sample_index].OutputImageFromKernel.size() == 1);
+	// delta image from next layer
+	Matrix & m_delta_next_layer = deltaVecNext[sample_index].OutputImageFromKernel[0];
+	// weight matrix from next layer
+	std::vector<Matrix> *v_w_next_layer = __nextLayer->GetWeightMatrix();
+	// make sure dimension match
+	size_t n_active_neurons_in_next_layer = m_delta_next_layer.Dimension().first;
+	assert(m_delta_next_layer.Dimension().second == 1);
+	assert(v_w_next_layer->size() == n_active_neurons_in_next_layer);
 
-    size_t C_next = vec_delta_image.size();
-    if( C_next != weightVecNext->size() )
+        /* 
+        // method 1 (this method should be used in layer level, otherwise too time consuming)
+	Matrix w_next_layer = Matrix::ConcatenateMatrixByI(*v_w_next_layer);
+	Matrix w_next_layer_T = w_next_layer.Transpose();
+
+	Matrix m_delta_current_layer = w_next_layer_T * m_delta_next_layer;
+        
+	Images delta_image_current_layer_cache;
+	delta_image_current_layer_cache.OutputImageFromKernel.push_back(m_delta_current_layer);
+
+	Images delta_image_current_layer = 
+	    delta_image_current_layer_cache.Tensorization(output_image_size_for_current_layer.first, output_image_size_for_current_layer.second);
+
+        delta_for_current_neuron_in_current_sample = (delta_image_current_layer.OutputImageFromKernel[__coord.k])[__coord.i][__coord.j] * _sigma_prime;
+	cout<<"sample id: "<<sample_index<<" delta: "<<delta_for_current_neuron_in_current_sample<<endl;
+        */	
+        
+	// method 2 (compute only for current neuron, not the whole layer in method 1)
+	auto mapped_coords_in_vec = mappedCoordsInVector(output_image_size_for_current_layer, __coord);
+	double tmp = 0;
+	for(size_t iii = 0; iii<n_active_neurons_in_next_layer; iii++)
+	{
+	    tmp += ((*v_w_next_layer)[iii])[0][mapped_coords_in_vec.first] * m_delta_next_layer[iii][0];
+	}
+	delta_for_current_neuron_in_current_sample = tmp * _sigma_prime;
+
+	// already checked: method 1 and method 2 have the same results
+	//cout<<"sample id: "<<sample_index<<" delta: "<<delta_for_current_neuron_in_current_sample<<endl;
+    }
+    else if(__nextLayer->GetType() == LayerType::cnn )
     {
-	std::cout<<"Error: kernel number not match in cnn delta updating procedure."<<std::endl;
+        // next layer is cnn, 2 dimensional
+	// vector of delta matrix from next layer
+	std::vector<Matrix> & v_m_delta_next_layer = deltaVecNext[sample_index].OutputImageFromKernel;
+	// vector of weight matrix from next layer
+	std::vector<Matrix> * v_w_next_layer = __nextLayer->GetWeightMatrix();
+
+	size_t C_next = v_m_delta_next_layer.size();
+	assert(C_next == v_w_next_layer->size()); // make sure number of kernels = number of delta matrix in next layer
+
+	// back propagation
+	double tmp = 0;
+	for(size_t d=0;d<C_next;d++) // sum all kernels
+	{ 
+	    // get d^th delta and weight matrix of next layer
+	    Matrix & delta = v_m_delta_next_layer[d];
+	    Matrix & weight = (*v_w_next_layer)[d];
+
+	    auto weight_dimension = weight.Dimension();
+	    auto delta_dimension =  delta.Dimension();
+
+	    for(size_t p=0; p<weight_dimension.first;p++){
+		for(size_t q=0;q<weight_dimension.second;q++)
+		{
+		    double tmp_d = 0;
+		    int delta_index_p = __coord.i - p;
+		    int delta_index_q = __coord.j - q;
+		    if(delta_index_p >= 0 && delta_index_q >= 0 && delta_index_p<(int)delta_dimension.first && delta_index_q<(int)delta_dimension.second )
+			tmp_d = delta[delta_index_p][delta_index_q];
+		    double tmp_w = weight[p][q];
+		    tmp += tmp_d * tmp_w;
+		}
+	    }
+	}
+
+	// multiply  sigma_prime
+	delta_for_current_neuron_in_current_sample = tmp * _sigma_prime;
+    }
+    else if(__nextLayer->GetType() != LayerType::pooling)
+    {
+        // next layer is pooling 
+	// number of  delta images from next layer should = number of kernels in this layer
+	assert(deltaVecNext[sample_index].OutputImageFromKernel.size() == __layer->GetWeightMatrix()->size());
+	
+	// --) directly get delta image matrix in next layer for current kernel (for pooling, kernels have 1-to-1 mapping relationship)
+        Matrix & m_delta_next_layer = deltaVecNext[sample_index].OutputImageFromKernel[__coord.k];
+
+	// --) get delta value corresponds to current neuron
+	//     step 1) from neuron element coord get the corresponding coord in pooling image
+	auto k_dim = __nextLayer->GetKernelDimensionCNN(); // get pooling kernel dimension from next layer
+	int x_coord_in_pooling = (int)__coord.i / (int) k_dim.first;
+	int y_coord_in_pooling = (int)__coord.j / (int) k_dim.second;
+	assert(x_coord_in_pooling < (int)m_delta_next_layer.Dimension().first);
+	assert(y_coord_in_pooling < (int)m_delta_next_layer.Dimension().second);
+
+	float delta_candidate = m_delta_next_layer[x_coord_in_pooling][y_coord_in_pooling];
+
+	// --) then check 'A' value of current neuron,
+	if(__nextLayer->GetPoolingMethod() == PoolingMethod::Max)
+	{
+	    // check if current neuron is the max one
+	    auto & v_images_in_current_layer = __layer->GetImagesActiveA();
+	    Images & images_in_current_layer =  v_images_in_current_layer[sample_index];
+	    Matrix & image_current_kernel = images_in_current_layer.OutputImageFromKernel[__coord.k];
+
+            // get the max element in the covered section
+	    float max_a_sec = image_current_kernel.MaxInSection(x_coord_in_pooling*k_dim.first, (x_coord_in_pooling+1)*k_dim.first,
+		    y_coord_in_pooling*k_dim.second, (y_coord_in_pooling+1)*k_dim.second);
+            
+	    float a_current_neuron = __a[sample_index];
+
+	    if(a_current_neuron >= max_a_sec) 
+		delta_for_current_neuron_in_current_sample = delta_candidate; // current neuron is the max one (the one being used)
+	    else 
+		delta_for_current_neuron_in_current_sample = 0; // current neuron is not the max one (not used)
+	}
+	else if(__nextLayer->GetPoolingMethod() == PoolingMethod::Average)
+	{
+	    delta_for_current_neuron_in_current_sample = delta_candidate;
+	}
+	else 
+	{
+	    std::cout<<__func__<<" Error: undefined pooling method, something is wrong."
+	             <<endl;
+	    exit(0);
+	}
+
+	cout<<"pooling->cnn backpropagation: to be tested..."<<endl;
+    }
+    else
+    {
+        std::cout<<__func__<<" Error: CNN layer followed by unknow type of layer, something is wrong."
+	         <<std::endl;
 	exit(0);
     }
 
-    // back propagation
-    double tmp = 0;
-    for(size_t d=0;d<C_next;d++)
-    { // sum all kernels
-	// get d^th delta and weight matrix of next layer
-	Matrix delta = vec_delta_image[d];
-	Matrix weight = (*weightVecNext)[d];
-
-	auto weight_dimension = weight.Dimension();
-	auto delta_dimension =  delta.Dimension();
-
-	for(size_t p=0; p<weight_dimension.first;p++){
-	    for(size_t q=0;q<weight_dimension.second;q++){
-		double tmp_d = 0;
-		int delta_index_p = __coord.i - p;
-		int delta_index_q = __coord.j - q;
-		if(delta_index_p >= 0 && delta_index_q >= 0 && delta_index_p<(int)delta_dimension.first && delta_index_q<(int)delta_dimension.second )
-		    tmp_d = delta[delta_index_p][delta_index_q];
-		double tmp_w = weight[p][q];
-		tmp += tmp_d * tmp_w;
-	    }
-	}
-    }
-
-    tmp = tmp * _sigma_prime;
-
-    __delta[sample_index] = tmp;
+    __delta[sample_index] = delta_for_current_neuron_in_current_sample;
 }
 
 void Neuron::UpdateDeltaPooling(int sample_index)

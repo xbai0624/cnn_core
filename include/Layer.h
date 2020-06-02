@@ -18,7 +18,8 @@
 enum class PoolingMethod 
 {
     Max,
-    Average
+    Average,
+    Undefined
 };
 
 
@@ -62,7 +63,9 @@ struct Filter2D
     std::vector<std::vector<bool>> __filter; 
 
     Filter2D()
-    {}
+    {
+        __filter.clear();
+    }
 
     Filter2D(size_t i, size_t j)
     {
@@ -131,6 +134,8 @@ struct NeuronCoord
 };
 std::ostream & operator<<(std::ostream&, const NeuronCoord &c);
 
+//#include <iostream>
+
 // a struct holding layer output image of one single training sample
 // so each batch will have a vector of this (Images) struct
 struct Images
@@ -170,8 +175,10 @@ struct Images
 	//     (2D layer can have multiple kernels, 1D layer should only have 1 "kernel");
 	assert(OutputImageFromKernel.size() > 0);
         auto dim = OutputImageFromKernel[0].Dimension();
+	
 	Images tmp = ReshapeKernels(dim.first*dim.second, 1);
 	Matrix large_vector = Matrix::ConcatenateMatrixByI(tmp.OutputImageFromKernel);
+
 	tmp.OutputImageFromKernel.clear();
 	tmp.OutputImageFromKernel.push_back(large_vector);
 	return tmp;
@@ -197,6 +204,7 @@ struct Images
 	    Matrix _t = _tmp.Reshape(I, J);
 	    Ret.OutputImageFromKernel.push_back(_t);
 	}
+	//std::cout<<"before return: "<<&Ret<<std::endl;
 	return Ret;
     }
 };
@@ -360,6 +368,8 @@ public:
     virtual std::pair<size_t, size_t> GetOutputImageSize() = 0; // used for setup layer
     virtual int GetNumberOfNeurons() = 0;
     virtual int GetNumberOfNeuronsFC() = 0;
+    virtual size_t GetNumberOfKernelsCNN() = 0;
+    virtual std::pair<size_t, size_t> GetKernelDimensionCNN() = 0;
     virtual int GetID(){return __layerID;};
     virtual int GetBatchSize() = 0;
     virtual CostFuncType GetCostFuncType() = 0;

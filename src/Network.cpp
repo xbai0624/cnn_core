@@ -5,6 +5,7 @@
 #include "ConstructLayer.h"
 
 #include <iostream>
+#include <chrono>
 
 using namespace std;
 
@@ -29,56 +30,65 @@ void Network::Init()
 
 void Network::ConstructLayers()
 {
-    // 1) Data interface, this is a tool class, for data prepare
-    //DataInterface data_interface;
-    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_1D);
-    //auto a = data_interface->GetNewBatchData();
-    //for(auto &i: a) cout<<i<<endl;
-    //auto b = data_interface.GetNewBatchLabel();
+    // Network structure: {Image->Input->CNN->pooling->FC->FC->Output}
 
-    // 2) declare all needed layers 
-    Layer *layer_input = nullptr, *l0 = nullptr, *layer_output = nullptr;
+    // 1) Data interface, this is a tool class, for data prepare
+    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D);
 
     // 3) input layer
-    layer_input = new ConstructLayer(LayerType::input, LayerDimension::_1D);
+    LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0);
+    Layer* layer_input = new ConstructLayer(p_list0);
     // NOTE: a data_interface class pointer must be passed to input layer before calling input_layer->Init() function
     //       because Initialization rely on data_interface
-    layer_input -> PassDataInterface(data_interface);
     layer_input->Init();
-    cout<<"input layer test finished..."<<endl;
 
-    // 4) middle layer
-    l0 = new ConstructLayer(LayerType::fullyConnected, 20);
-    l0->SetPrevLayer(layer_input);
-    //l0->SetNextLayer(layer_output);
-    l0->PassDataInterface(data_interface); // now all layers need data_interface pointer
+    // 4) middle layer 3 : cnn layer
+    LayerParameterList p_list4(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
+	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1);
+    Layer *l2 = new ConstructLayer(p_list4);
+    l2->SetPrevLayer(layer_input);
+    l2->Init();
+ 
+
+    // 4) middle layer 2 : cnn layer
+    LayerParameterList p_list3(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
+	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1);
+    Layer *l1 = new ConstructLayer(p_list3);
+    l1->SetPrevLayer(l2);
+    l1->Init();
+ 
+    // 4) middle layer 1
+    LayerParameterList p_list1(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 20, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1);
+    Layer *l0 = new ConstructLayer(p_list1);
+    l0->SetPrevLayer(l1);
     l0->Init();
-    //l0->EpochInit();
-    //l0->EnableDropOut();
-    //l0->BatchInit();
 
     // 5) output layer
-    // test output layer
-    layer_output = new ConstructLayer(LayerType::output, 2); // output layer must be a fully connected layer
+    LayerParameterList p_list2(LayerType::output, LayerDimension::_1D, data_interface, 2, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0., Regularization::L2, 0.1);
+    Layer* layer_output = new ConstructLayer(p_list2);
     layer_output -> SetPrevLayer(l0);
-    layer_output -> PassDataInterface(data_interface); // output layer also need data interface for accessing labels
     layer_output -> Init();
-    //layer_output -> EpochInit(); // output layer no dropout
-    //layer_output -> BatchInit();
 
-    // 6) connect all layers
+    // 6) connect all layers; SetNextLayer must be after all layers have finished initialization
+    l2->SetNextLayer(l1);
+    l1->SetNextLayer(l0);
     l0->SetNextLayer(layer_output); // This line is ugly, to be improved
 
     // 7) save all constructed layers
     __inputLayer = layer_input;
     __outputLayer = layer_output;
+    __middleLayers.push_back(l2); // must be pushed in order
+    __middleLayers.push_back(l1);
     __middleLayers.push_back(l0);
     __dataInterface = data_interface;
 }
 
 void Network::Train()
 {
-    __numberOfEpoch = 2; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+    __numberOfEpoch = 1; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
     for(int i=0;i<__numberOfEpoch;i++)
     {
         std::cout<<"[------]Number of epoch: "<<i<<"/"<<__numberOfEpoch<<endl;
@@ -114,9 +124,19 @@ void Network::UpdateBatch()
         i->BatchInit();
     __outputLayer->BatchInit(); // input layer do not need init
 
+    auto t1 = std::chrono::high_resolution_clock::now();
     ForwardPropagateForBatch();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto dt1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1);
+    std::cout<<"forward propagation cost: "<<dt1.count()<<" milli seconds"<<endl;
     BackwardPropagateForBatch();
+    auto t3 = std::chrono::high_resolution_clock::now();
+    auto dt2 = std::chrono::duration_cast<std::chrono::milliseconds>(t3-t2);
+    std::cout<<"backward propagation cost: "<<dt2.count()<<" milli seconds"<<endl;
     UpdateWeightsAndBiasForBatch();
+    auto t4 = std::chrono::high_resolution_clock::now();
+    auto dt3 = std::chrono::duration_cast<std::chrono::milliseconds>(t4-t3);
+    std::cout<<"update w&b cost: "<<dt3.count()<<" milli seconds"<<endl;
 }
 
 void Network::ForwardPropagateForBatch()

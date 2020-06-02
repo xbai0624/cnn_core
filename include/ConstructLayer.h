@@ -39,6 +39,7 @@ public:
     virtual void SetNumberOfKernelsCNN(size_t n);
     virtual void SetKernelSizeCNN(std::pair<size_t, size_t> s);
     void InitNeuronsCNN();
+    void InitNeuronsPooling();
     void InitNeuronsFC();
     void InitNeuronsInputLayer();
     void InitFilters();
@@ -137,8 +138,11 @@ public:
     virtual std::pair<size_t, size_t> GetOutputImageSize(); // used for setup layer
     virtual std::pair<size_t, size_t> GetOutputImageSizeCNN(); // used for setup layer
     virtual std::pair<size_t, size_t> GetOutputImageSizeFC(); // used for setup layer
+    virtual std::pair<size_t, size_t> GetOutputImageSizeInputLayer(); // used for setup layer
     virtual int GetNumberOfNeurons();
     virtual int GetNumberOfNeuronsFC();
+    virtual size_t GetNumberOfKernelsCNN();
+    virtual std::pair<size_t, size_t> GetKernelDimensionCNN();
     virtual int GetBatchSize();
     virtual CostFuncType GetCostFuncType();
     virtual DataInterface * GetDataInterface();
@@ -226,6 +230,8 @@ private:
     float __dropOut = 0.5;
     // stride, for now x-y share the same stride
     // for now, only use 1. Other values will be implemented with future improvements
+    //     !!! note: -- this stride is only for CNN, pooling does not need this parameter, 
+    //     !!! note: -- pooling should have no overlap coverage on the input image, which means: pooling stride should = pooling kernel dimension
     int __cnnStride = 1; 
     PoolingMethod __poolingMethod = PoolingMethod::Max;
     CostFuncType __cost_func_type = CostFuncType::cross_entropy;
