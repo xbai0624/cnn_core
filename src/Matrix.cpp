@@ -986,7 +986,7 @@ float Matrix::AverageInSection(size_t i_start, size_t i_end, size_t j_start, siz
 	}
     }
 
-    res = res /(float)(i_end-i_start)/(float)(j_end - j_start); 
+    res = res /(int)(i_end-i_start)/(int)(j_end - j_start); 
     return res;
 }
 
