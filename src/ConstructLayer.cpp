@@ -265,7 +265,7 @@ void ConstructLayer::InitNeurons()
 	std::cout<<"Error: Init neurons, unrecognized layer type."<<std::endl;
 	exit(0);
     }
-    std::cout<<"Debug: Layer:"<<GetID()<<" init neruons done."<<std::endl;
+    //std::cout<<"Debug: Layer:"<<GetID()<<" init neruons done."<<std::endl;
 
     // after initializing all neurons, setup neuron dimension information
     // setup total neuron dimension
@@ -964,7 +964,7 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
     Images sample_image_Z;
     Images sample_image_Z_full;
 
-    if(__type == LayerType::fullyConnected) // for fully connected layer
+    if(__type == LayerType::fullyConnected || __type == LayerType::output) // for fully connected layer; output layer is also a fully connected layer
     {
 	for(size_t k=0;k<__neuronDim.k;k++) // kernel
 	{
@@ -1033,8 +1033,7 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
     }
     else // for other layer types
     {
-        // Z image is not needed in layer level for output layer 
-	// only 'A' image and 'Delta' image in layer level are needed for output layer
+        // reserved for future types of layers
     }
 }
 
@@ -1521,7 +1520,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 	__activeNeuronDim.i = active_neurons;
     }
 
-    std::cout<<"Debug: Layer:"<<GetID()<<" TransferValueFromOriginalToActiveWB() done."<<std::endl;
+    //std::cout<<"Debug: Layer:"<<GetID()<<" TransferValueFromOriginalToActiveWB() done."<<std::endl;
 } 
 
 void ConstructLayer::UpdateImageForCurrentTrainingSample()

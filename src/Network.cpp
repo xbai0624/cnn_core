@@ -159,15 +159,15 @@ void Network::UpdateBatch()
     ForwardPropagateForBatch();
     auto t2 = std::chrono::high_resolution_clock::now();
     auto dt1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1);
-    std::cout<<"forward propagation cost: "<<dt1.count()<<" milli seconds"<<endl;
+    std::cout<<"forward propagation cost: "<<dt1.count()<<" milliseconds"<<endl;
     BackwardPropagateForBatch();
     auto t3 = std::chrono::high_resolution_clock::now();
     auto dt2 = std::chrono::duration_cast<std::chrono::milliseconds>(t3-t2);
-    std::cout<<"backward propagation cost: "<<dt2.count()<<" milli seconds"<<endl;
+    std::cout<<"backward propagation cost: "<<dt2.count()<<" milliseconds"<<endl;
     UpdateWeightsAndBiasForBatch();
     auto t4 = std::chrono::high_resolution_clock::now();
     auto dt3 = std::chrono::duration_cast<std::chrono::milliseconds>(t4-t3);
-    std::cout<<"update w&b cost: "<<dt3.count()<<" milli seconds"<<endl;
+    std::cout<<"update w&b cost: "<<dt3.count()<<" milliseconds"<<endl;
 }
 
 void Network::ForwardPropagateForBatch()
