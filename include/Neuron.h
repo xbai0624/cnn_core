@@ -12,19 +12,7 @@
 #include <vector>
 #include <cstddef>
 
-enum class ActuationFuncType 
-{
-    Sigmoid,
-    Tanh,
-    Relu
-};
-
-//#include "Matrix.h"
-//#include "Layer.h"
-
-class Matrix;
-class Layer;
-struct NeuronCoord;
+#include "Layer.h"
 
 class Neuron 
 {
@@ -45,9 +33,11 @@ public:
 
     void Reset(); // reset for next training (batch level)
 
-    double __sigmoid(double); // actuation function
-    double __tanh(double);
-    double __relu(double);
+    // actuation function
+    double __sigmoid(double);   // sigmoid
+    double __softmax(Matrix &); // softmax
+    double __tanh(double);      // tanh(x)
+    double __relu(double);      // rectified linear unit
 
     // setters
     void SetLayer(Layer*); // layer information
@@ -59,6 +49,7 @@ public:
     void SetCoordK(size_t);
     void SetCoord(NeuronCoord);
     void SetActuationFuncType(ActuationFuncType t);
+    ActuationFuncType GetActuationFuncType();
 
     // update matrix a; 'a' computation is independent of layer type, 
     // no need to design helper functions for different type layers

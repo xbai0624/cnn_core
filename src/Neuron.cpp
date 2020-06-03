@@ -55,6 +55,33 @@ double Neuron::__sigmoid(double z)
     return 1/(1 + exp(-z));
 }
 
+
+double Neuron::__softmax(Matrix &m_z)
+{
+    if(__layer->GetType() != LayerType::output)
+    {
+        // soft max is usually used in output layer, it is rare in hidden layer
+	// print a warning if the neuron detected layertype not = output
+        std::cout<<__func__<<" Warning: using softmax in hidden layers? please make sure."
+	         <<std::endl;
+    }
+    auto dim = m_z.Dimension();
+    assert(dim.second == 1);
+
+    size_t i = __coord.i;
+    assert(dim.first > i);
+
+    float sum = 0;
+    for(size_t k = 0;k<dim.first;k++)
+    {
+        sum += exp(m_z[k][0]);
+    }
+
+    return exp(m_z[i][0])/sum;
+}
+
+
+
 double Neuron::__tanh(double z)
 {
     double _t = exp(2.0*z);
@@ -127,6 +154,14 @@ void Neuron::SetActuationFuncType(ActuationFuncType t)
     // set neurons's actuation function type
     __funcType = t;
 }
+
+
+ActuationFuncType Neuron::GetActuationFuncType()
+{
+    // get neurons's actuation function type
+    return __funcType;
+}
+
 
 void Neuron::UpdateZ(int sample_index)
 {
@@ -313,6 +348,14 @@ void Neuron::UpdateA(int sample_index)
 	a = __sigmoid(v);
 	//cout<<"sigmoid"<<endl;
     }
+    else if(__funcType == ActuationFuncType::SoftMax)
+    {
+        auto & images  = __layer->GetImagesActiveZ();
+	assert(images[sample_index].OutputImageFromKernel.size() == 1); // make sure it is 1D layer
+	Matrix & m_z = images[sample_index].OutputImageFromKernel[0];
+
+	a = __softmax(m_z);
+    }
     else if(__funcType == ActuationFuncType::Tanh)
     {
 	a = __tanh(v);
@@ -358,8 +401,10 @@ void Neuron::UpdateSigmaPrime(int sample_index)
     double z = __z[sample_index];
     double sigma_prime = -100; // theoretically, it must between [0, 1]
 
-    if(__funcType == ActuationFuncType::Sigmoid) 
+    if(__funcType == ActuationFuncType::Sigmoid || __funcType == ActuationFuncType::SoftMax) 
     {
+        // the \partial a over \partial z is the same for sigmoid and softmax
+	// one can easily prove it
 	sigma_prime = (1-a)*a;
     }
     else if(__funcType == ActuationFuncType::Tanh) 

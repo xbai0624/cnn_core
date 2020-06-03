@@ -14,7 +14,7 @@ public:
     template<typename T>
 	Network(T l)
 	{
-	    __middleLayers.push_back(dynamic_cast<Layer*>(l));
+	    __middleAndOutputLayers.push_back(dynamic_cast<Layer*>(l));
 	}
 
     template<typename T, typename... Args>
@@ -45,7 +45,7 @@ public:
     std::vector<Matrix> Classify();
 
 private:
-    std::vector<Layer*> __middleLayers;                  // save all middle layers
+    std::vector<Layer*> __middleAndOutputLayers;                  // save all middle layers
     Layer *__inputLayer=nullptr, *__outputLayer=nullptr; // input and output layers
     DataInterface *__dataInterface = nullptr;            // save data interface class
 

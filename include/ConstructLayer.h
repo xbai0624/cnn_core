@@ -165,6 +165,7 @@ private:
     // 2):
     // this 3D matrix keeps all neurons in current layer
     std::vector<Pixel2D<Neuron*>> __neurons; // for MLPs, neurons will be in vertical vector form 
+    ActuationFuncType __neuron_actuation_func_type = ActuationFuncType::Sigmoid;
     // we will follow exactly the Math form, so for FC layer, it has only one vertical form neurons
     // __neruons.size() = 1; __neurons[0].size() = N (layer size); __neruons[0][0].size() = 1;
 

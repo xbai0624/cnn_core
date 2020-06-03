@@ -43,6 +43,7 @@ ConstructLayer::ConstructLayer(LayerParameterList p_list)
     __p_data_interface = p_list._pDataInterface;
     __regularizationMethod = p_list._gRegularization;
     __regularizationParameter = p_list._gRegularizationParameter;
+    __neuron_actuation_func_type = p_list._gActuationFuncType;
 
     // parameters dependent on layer type
     if(__type == LayerType::input)
@@ -334,6 +335,7 @@ void ConstructLayer::InitNeuronsCNN()
 	    {
 		Neuron *n = new Neuron();
 		n->SetCoord(i, j, k); // set neuron coord
+		n->SetActuationFuncType(__neuron_actuation_func_type);
 		image[i][j] = n;
 	    }
 	}
@@ -382,6 +384,7 @@ void ConstructLayer::InitNeuronsPooling()
 	    {
 		Neuron *n = new Neuron();
 		n->SetCoord(i, j, k); // set neuron coord
+		n->SetActuationFuncType(__neuron_actuation_func_type);
 		image[i][j] = n;
 	    }
 	}
@@ -398,6 +401,7 @@ void ConstructLayer::InitNeuronsFC()
     {
 	Neuron *n = new Neuron();
 	n->SetCoord(i, 0, 0);
+	n->SetActuationFuncType(__neuron_actuation_func_type);
 	image[i][0] = n;
     }
     __neurons.push_back(image);
@@ -433,6 +437,7 @@ void ConstructLayer::InitNeuronsInputLayer()
 	    {
 		Neuron *n = new Neuron();
 		// n->SetCoord(i, j, k); // input layer neuron does not need coord
+		n->SetActuationFuncType(__neuron_actuation_func_type);
 		image[i][0] = n;
 	    }
 	}
@@ -583,7 +588,10 @@ void ConstructLayer::ForwardPropagateForSample(int sample_index)
     //     ---) compute Z, A, A'(Z) for this layer
     //          these works are done neuron by neuron (neuron level)
 
-    //cout<<"total neuron dimension: "<<__neuronDim<<endl; 
+    // layers needs to finish all z's first 
+    // this special treatment is for softmax actuation functions in output layer
+    // b/c in softmax, one need all Z's already calculated before updating A and sigma^\prime
+    // step 1) finish z
     for(size_t k=0;k<__neurons.size();k++)
     {
 	auto dim = __neurons[k].Dimension();
@@ -593,14 +601,27 @@ void ConstructLayer::ForwardPropagateForSample(int sample_index)
 	    {
 		//cout<<"coord (i, j, k): ("<<i<<", "<<j<<", "<<k<<")"<<endl;
 		if(!__neurons[k][i][j]->IsActive()) continue;
-		__neurons[k][i][j] -> ForwardPropagateForSample(sample_index);
+		__neurons[k][i][j] -> UpdateZ(sample_index);
 	    }
 	}
     }
-
-    // when propagation for this layer is done, update the A, Z matrices (extract value from neurons and update them to layer)
-    UpdateImagesA(sample_index);
     UpdateImagesZ(sample_index);
+    // step 2) then  finish a and sigma^\prime
+    for(size_t k=0;k<__neurons.size();k++)
+    {
+	auto dim = __neurons[k].Dimension();
+	for(size_t i=0;i<dim.first;i++)
+	{
+	    for(size_t j=0;j<dim.second;j++)
+	    {
+		//cout<<"coord (i, j, k): ("<<i<<", "<<j<<", "<<k<<")"<<endl;
+		if(!__neurons[k][i][j]->IsActive()) continue;
+		__neurons[k][i][j] -> UpdateA(sample_index);
+		__neurons[k][i][j] -> UpdateSigmaPrime(sample_index); // sigma^\prime is not needed in layer, but needed in neuron
+	    }
+	}
+    }
+    UpdateImagesA(sample_index);
 }
 
 void ConstructLayer::BackwardPropagateForSample(int sample_index)
@@ -609,30 +630,37 @@ void ConstructLayer::BackwardPropagateForSample(int sample_index)
     //     ---) compute delta for this layer
     //     ---) only after all samples in this batch finished forward propagation, one can do this backward propagation
 
-    for(size_t k=0;k<__neurons.size();k++){
-	auto dim = __neurons[k].Dimension();
-	for(size_t i=0;i<dim.first;i++)  {
-	    for(size_t j=0;j<dim.second;j++) {
-		if(__neurons[k][i][j]->IsActive())
-		{
-		    __neurons[k][i][j] -> BackwardPropagateForSample(sample_index);
-		    /*
-		    if(__type == LayerType::fullyConnected)
+    if(__type == LayerType::output)
+    {
+	ComputeCostInOutputLayerForCurrentSample(sample_index);
+    } 
+    else 
+    {
+	for(size_t k=0;k<__neurons.size();k++)
+	{
+	    auto dim = __neurons[k].Dimension();
+	    for(size_t i=0;i<dim.first;i++)  {
+		for(size_t j=0;j<dim.second;j++) {
+		    if(__neurons[k][i][j]->IsActive())
 		    {
-			cout<<__func__<<" fc layer neuron coord: "<<__neurons[k][i][j]->GetCoord()<<endl;
+			__neurons[k][i][j] -> BackwardPropagateForSample(sample_index);
+			/*
+			   if(__type == LayerType::fullyConnected)
+			   {
+			   cout<<__func__<<" fc layer neuron coord: "<<__neurons[k][i][j]->GetCoord()<<endl;
+			   }
+			   else if(__type == LayerType::cnn)
+			   {
+			   cout<<__func__<<" cnn layer neuron coord: "<<__neurons[k][i][j]->GetCoord()<<endl;
+			   }
+			   */
 		    }
-		    else if(__type == LayerType::cnn)
-		    {
-			cout<<__func__<<" cnn layer neuron coord: "<<__neurons[k][i][j]->GetCoord()<<endl;
-		    }
-		    */
 		}
 	    }
 	}
+	// when propagation for this layer is done, update the Delta matrices
+	UpdateImagesDelta(sample_index);
     }
-
-    // when propagation for this layer is done, update the Delta matrices
-    UpdateImagesDelta(sample_index);
 }
 
 
@@ -689,17 +717,8 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample(int sample_index)
 	    <<endl;
         exit(0);
     }
-    // for output layer
-    // propagation(backward and forward) are integrated in this function
 
-    // --- 1) first do forward propagation, calculate z and a
-    ForwardPropagateForSample(sample_index);
-
-    // --- 2) then compute the cost function C(a_i, y_i)
-    //      if you want a softmax layer, then the softmax should also be done here
-    //size_t sample_number = __imageA.size(); // obsolete
-
-    //Images sample_image = __imageA.back();
+    // --- 2) compute the cost function C(a_i, y_i)
     Images sample_image = __imageA[sample_index]; // output layer drop out is not used for sure, so use __imageA is OK.
     assert(sample_image.GetNumberOfKernels() == 1); // output layer must be a fully connected layer, so one kernel
     // now get a_i
@@ -736,19 +755,15 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample(int sample_index)
 
 
     // --- 3) then calculate delta: delta = delta(a_i, y_i) for this sample
-    // -------------- please note: this function only calculate \delta for current sample, which cannot be used for backpropagation
-    // ------------------ the \delta used for backpropagation should be a sum of all \deltas in this batch
-    //
-    // ------------------ so: on batch level, you need to forward propagate n_batch_size times
-    // ----------------------- but only back propagate 1 time
-    //
-    // ----------------------- in other words, backpropagation only happens when all forwardpropagation finished !!! !!! ******
-    // ----------------------- this is because THE COST_FUNCTION is defined as a sum over all samples in one batch !!!!! ******
+    // -------- please note: this function only calculate \delta for current sample, 
+    // ----------- when doing back propagation for hidden layers, only delta with the same sample_index should be updated 
+    // ----------- the overall delta for this batch should be an average of all deltas in this batch
+    // ----------- this is due to the characteristic of Cost function, which is an averaged sum over all samples
 
     Matrix delta = Matrix(sample_A.Dimension());
     if(__cost_func_type == CostFuncType::cross_entropy)
     {
-	delta = sample_A - sample_label;
+	delta = sample_A - sample_label; // softmax and sigmoid all have this form
     }
     else if(__cost_func_type == CostFuncType::log_likelihood)
     {
@@ -756,7 +771,7 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample(int sample_index)
     }
     else if(__cost_func_type == CostFuncType::quadratic_sum)
     {
-	delta = sample_A - sample_label;
+	delta = sample_A - sample_label; // this is a place holder, not used
     }
     else {
 	cout<<"Error: cost function only supports cross_entropy, loglikelihood, quadratic_sum"
@@ -1063,7 +1078,7 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
     Images sample_image_delta;
     Images sample_image_delta_full;
 
-    // !!! Note:: !!! delta for output layer is updated in ComputeCostInOutputLayerForCurrentSample(int) function
+    // !!! Note:: !!! delta for output layer needs different method, and is done ComputeCostInOutputLayerForCurrentSample(int) function
     //                no need to do it here
     if(__type == LayerType::fullyConnected) // for fully connected layer, 
     {

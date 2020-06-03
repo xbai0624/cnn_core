@@ -37,7 +37,7 @@ void Network::ConstructLayers()
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0);
+	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0, ActuationFuncType::Sigmoid);
     Layer* layer_input = new ConstructLayer(p_list0);
     // NOTE: a data_interface class pointer must be passed to input layer before calling input_layer->Init() function
     //       because Initialization rely on data_interface
@@ -45,14 +45,14 @@ void Network::ConstructLayers()
 
     // 4) middle layer 3 : cnn layer ID=1
     LayerParameterList p_list4(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1);
+	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
     Layer *l2 = new ConstructLayer(p_list4);
     l2->SetPrevLayer(layer_input);
     l2->Init();
   
     // 4) middle layer 2 : pooling layer ID=2
     LayerParameterList p_list7(LayerType::pooling, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0.);
+	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0., ActuationFuncType::Sigmoid);
     Layer *l5 = new ConstructLayer(p_list7);
     l5->SetPrevLayer(l2);
     l5->Init();
@@ -60,7 +60,7 @@ void Network::ConstructLayers()
 
     // 4) middle layer 2 : cnn layer ID=3
     LayerParameterList p_list3(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1);
+	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
     Layer *l1 = new ConstructLayer(p_list3);
     l1->SetPrevLayer(l5);
     l1->Init();
@@ -68,7 +68,7 @@ void Network::ConstructLayers()
  
     // 4) middle layer 2 : pooling layer ID=4
     LayerParameterList p_list6(LayerType::pooling, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0.);
+	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0., ActuationFuncType::Sigmoid);
     Layer *l4 = new ConstructLayer(p_list6);
     l4->SetPrevLayer(l1);
     l4->Init();
@@ -76,22 +76,22 @@ void Network::ConstructLayers()
 
     // 4) middle layer 1 : fc layer ID=5
     LayerParameterList p_list5(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 40, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1);
+	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
     Layer *l3 = new ConstructLayer(p_list5);
     l3->SetPrevLayer(l4);
     l3->Init();
 
  
-    // 4) middle layer 1 : fc layer ID=7
+    // 4) middle layer 1 : fc layer ID=6
     LayerParameterList p_list1(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 20, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1);
+	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
     Layer *l0 = new ConstructLayer(p_list1);
     l0->SetPrevLayer(l3);
     l0->Init();
 
     // 5) output layer ID = 7
     LayerParameterList p_list2(LayerType::output, LayerDimension::_1D, data_interface, 2, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0., Regularization::L2, 0.1);
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0., Regularization::L2, 0.1, ActuationFuncType::SoftMax);
     Layer* layer_output = new ConstructLayer(p_list2);
     layer_output -> SetPrevLayer(l0);
     layer_output -> Init();
@@ -109,12 +109,14 @@ void Network::ConstructLayers()
     // 7) save all constructed layers
     __inputLayer = layer_input;
     __outputLayer = layer_output;
-    __middleLayers.push_back(l2); // must be pushed in order
-    __middleLayers.push_back(l5); // must be pushed in order
-    __middleLayers.push_back(l1);
-    __middleLayers.push_back(l4);
-    __middleLayers.push_back(l3);
-    __middleLayers.push_back(l0);
+    __middleAndOutputLayers.push_back(l2); // must be pushed in order
+    __middleAndOutputLayers.push_back(l5); // must be pushed in order
+    __middleAndOutputLayers.push_back(l1);
+    __middleAndOutputLayers.push_back(l4);
+    __middleAndOutputLayers.push_back(l3);
+    __middleAndOutputLayers.push_back(l0);
+    __middleAndOutputLayers.push_back(layer_output);
+    //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
 }
 
@@ -135,11 +137,10 @@ void Network::UpdateEpoch()
     numberofBatches = 5; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQqq
 
     // initializations for epoch
-    for(auto &i: __middleLayers)
+    for(auto &i: __middleAndOutputLayers)
     {
 	i->EpochInit();
     }
-    __outputLayer->EpochInit();  // output layer no dropout
 
     for(int i=0;i<numberofBatches;i++)
     {
@@ -151,19 +152,20 @@ void Network::UpdateEpoch()
 void Network::UpdateBatch()
 {
     // initializations for batch
-    for(auto &i: __middleLayers)
+    for(auto &i: __middleAndOutputLayers)
         i->BatchInit();
-    __outputLayer->BatchInit(); // input layer do not need init
 
     auto t1 = std::chrono::high_resolution_clock::now();
     ForwardPropagateForBatch();
     auto t2 = std::chrono::high_resolution_clock::now();
     auto dt1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1);
     std::cout<<"forward propagation cost: "<<dt1.count()<<" milliseconds"<<endl;
+
     BackwardPropagateForBatch();
     auto t3 = std::chrono::high_resolution_clock::now();
     auto dt2 = std::chrono::duration_cast<std::chrono::milliseconds>(t3-t2);
     std::cout<<"backward propagation cost: "<<dt2.count()<<" milliseconds"<<endl;
+
     UpdateWeightsAndBiasForBatch();
     auto t4 = std::chrono::high_resolution_clock::now();
     auto dt3 = std::chrono::duration_cast<std::chrono::milliseconds>(t4-t3);
@@ -185,20 +187,11 @@ void Network::ForwardPropagateForBatch()
     // train each sample for the middle layers
     for(int sample_index=0;sample_index<sample_size;sample_index++)
     {
-	for(auto &i: __middleLayers)
+	for(auto &i: __middleAndOutputLayers)
+	{
+	    //cout<<"layer id: "<<i->GetID()<<endl;
 	    i->ForwardPropagateForSample(sample_index);
-
-	// compute cost in output layer for each sample
-	__outputLayer-> ComputeCostInOutputLayerForCurrentSample(sample_index);
-
-	// after finished training, clear used samples in input layer
-	// 1)
-	// this is necessary; b/c program aways fetch the last sample in "__imageA" from InputLayer
-	//                ---- so one need to pop_back() the used sample
-	// 2)
-	// not needed anymore; b/c changed from "dynamic increase" to "fixed length"
-	//                ---- now for eaching training, program fetch an indexed sample, not the last sample     
-	//__inputLayer->ClearUsedSampleForInputLayer();
+	}
     }
 }
 
@@ -208,16 +201,13 @@ void Network::BackwardPropagateForBatch()
     int sample_size = __dataInterface->GetBatchSize(); 
      
     // backward
-    int NLayers = __middleLayers.size();
+    int NLayers = __middleAndOutputLayers.size();
 
     for(int i=0;i<sample_size;i++)
     {
-	// first do output layer
-	__outputLayer -> BackwardPropagateForSample(i);
-
-	// then do middle layers
+	// output and middle layers
 	for(int nlayer=NLayers-1; nlayer>=0; nlayer--)
-	    __middleLayers[nlayer]->BackwardPropagateForSample(i);
+	    __middleAndOutputLayers[nlayer]->BackwardPropagateForSample(i);
     }
 
     /// no need for input layer
@@ -226,11 +216,8 @@ void Network::BackwardPropagateForBatch()
 void Network::UpdateWeightsAndBiasForBatch()
 {
     // update w&b for  middle layers
-    for(auto &i: __middleLayers)
+    for(auto &i: __middleAndOutputLayers)
 	i->UpdateWeightsAndBias();
-
-    // update w&b for output layer
-    __outputLayer -> UpdateWeightsAndBias();
 }
 
 std::vector<Matrix> Network::Classify()

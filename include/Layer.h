@@ -14,6 +14,18 @@
 //#include <iostream>
 #include "Matrix.h"
 
+// actuation function type used in neuron class: a =\sigma(z)
+//     for neuron
+enum class ActuationFuncType 
+{
+    Sigmoid,
+    SoftMax,
+    Tanh,
+    Relu,
+    Undefined
+};
+
+
 // necessary data structures for layer/neuron class
 enum class PoolingMethod 
 {
@@ -236,27 +248,30 @@ struct LayerParameterList
     Regularization _gRegularization;              // for non-input layers
     float _gRegularizationParameter;    // for non-input layers
 
+    ActuationFuncType _gActuationFuncType;
+
     // default constructor
     LayerParameterList():
 	_gLayerType(LayerType::Undefined), _gLayerDimension(LayerDimension::Undefined), 
 	_pDataInterface(nullptr), _nNeuronsFC(0), _nKernels(0), _gDimKernel(std::pair<size_t, size_t>(0, 0)),
 	_gLearningRate(0), _gUseDropout(false), _gDropoutFactor(0), _gRegularization(Regularization::Undefined),
-	_gRegularizationParameter(0)
+	_gRegularizationParameter(0), _gActuationFuncType(ActuationFuncType::Sigmoid)
     {
     }
 
     LayerParameterList(LayerType layer_type, LayerDimension layer_dimension, DataInterface *data_interface, 
 	    size_t n_neurons, size_t n_kernels, std::pair<size_t, size_t> dimension_kernel, float learning_rate,
-	    bool use_dropout, float dropout_factor, Regularization regu, float regu_parameter):
+	    bool use_dropout, float dropout_factor, Regularization regu, float regu_parameter, ActuationFuncType neuron_act_f_type):
 	_gLayerType(layer_type), _gLayerDimension(layer_dimension), 
 	_pDataInterface(data_interface), _nNeuronsFC(n_neurons), _nKernels(n_kernels), _gDimKernel(dimension_kernel),
 	_gLearningRate(learning_rate), _gUseDropout(use_dropout), _gDropoutFactor(dropout_factor), _gRegularization(regu),
-	_gRegularizationParameter(regu_parameter)
+	_gRegularizationParameter(regu_parameter), _gActuationFuncType(neuron_act_f_type)
     {
     }
 };
 
 
+// batch vs epoch see:
 // ref: https://towardsdatascience.com/epoch-vs-iterations-vs-batch-size-4dfb9c7ce9c9
 
 // layer class
