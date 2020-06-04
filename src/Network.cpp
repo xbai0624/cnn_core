@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 using namespace std;
 
@@ -28,6 +29,7 @@ void Network::Init()
     __numberOfEpoch = 10;
 }
 
+/*
 void Network::ConstructLayers()
 {
     // Network structure: {Image->Input->CNN->pooling->CNN->pooling->FC->FC->Output}
@@ -119,22 +121,98 @@ void Network::ConstructLayers()
     //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
 }
+*/
+
+void Network::ConstructLayers()
+{
+    // Network structure: {Image->Input->FC->FC->FC->Output}
+
+    // 1) Data interface, this is a tool class, for data prepare
+    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_1D);
+
+    // 3) input layer   ID=0
+    LayerParameterList p_list0(LayerType::input, LayerDimension::_1D, data_interface, 0, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0, ActuationFuncType::Sigmoid);
+    Layer* layer_input = new ConstructLayer(p_list0);
+    // NOTE: a data_interface class pointer must be passed to input layer before calling input_layer->Init() function
+    //       because Initialization rely on data_interface
+    layer_input->Init();
+/*
+    // 4) middle layer 1 : fc layer ID=5
+    LayerParameterList p_list1(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 60, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
+    Layer *l1 = new ConstructLayer(p_list1);
+    l1->SetPrevLayer(layer_input);
+    l1->Init();
+
+    // 4) middle layer 1 : fc layer ID=5
+    LayerParameterList p_list2(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 30, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, true, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
+    Layer *l2 = new ConstructLayer(p_list2);
+    l2->SetPrevLayer(l1);
+    l2->Init();
+*/ 
+    // 4) middle layer 1 : fc layer ID=6
+    LayerParameterList p_list3(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 10, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
+    Layer *l3 = new ConstructLayer(p_list3);
+    l3->SetPrevLayer(layer_input);
+    l3->Init();
+
+    // 5) output layer ID = 7
+    LayerParameterList p_list_output(LayerType::output, LayerDimension::_1D, data_interface, 2, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0., Regularization::L2, 0.1, ActuationFuncType::SoftMax);
+    Layer* layer_output = new ConstructLayer(p_list_output);
+    layer_output -> SetPrevLayer(l3);
+    layer_output -> Init();
+
+    // 6) connect all layers; SetNextLayer must be after all layers have finished initialization
+    //                        input layer not needed to set, input layer has no update on w & b
+    //                        input layer is just for data transfer (prepare)
+    //l1->SetNextLayer(l2);
+    //l2->SetNextLayer(l3);
+    l3->SetNextLayer(layer_output); // This line is ugly, to be improved
+
+    // 7) save all constructed layers
+    __inputLayer = layer_input;
+    __outputLayer = layer_output;
+    //__middleAndOutputLayers.push_back(l1); // must be pushed in order
+    //__middleAndOutputLayers.push_back(l2); // must be pushed in order
+    __middleAndOutputLayers.push_back(l3);
+    __middleAndOutputLayers.push_back(layer_output);
+    //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
+    __dataInterface = data_interface;
+}
 
 void Network::Train()
 {
-    __numberOfEpoch = 2; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+    __numberOfEpoch = 50; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
     for(int i=0;i<__numberOfEpoch;i++)
     {
         std::cout<<"[------]Number of epoch: "<<i<<"/"<<__numberOfEpoch<<endl;
         UpdateEpoch();
     }
+
+    // check accuracy track of training
+    cout<<"accuracy: "<<endl;
+    std::vector<float> & accuracy = __outputLayer->GetAccuracyForBatches();
+    for(auto &i: accuracy)
+        cout<<i<<",   "<<endl;
+
+    // check cost track of training
+    cout<<"cost: "<<endl;
+    std::vector<float> &cost = __outputLayer->GetCostForBatches();
+    for(auto &i: cost)
+        cout<<i<<", "<<endl;
 }
 
 void Network::UpdateEpoch()
 {
     int numberofBatches = __dataInterface -> GetNumberOfBatches();
     cout<<"......Info: "<<numberofBatches<<" batches in this epoch"<<endl;
-    numberofBatches = 5; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQqq
+    numberofBatches = 1; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQqq
+
+    __dataInterface->Reset();
 
     // initializations for epoch
     for(auto &i: __middleAndOutputLayers)
@@ -157,19 +235,22 @@ void Network::UpdateBatch()
 
     auto t1 = std::chrono::high_resolution_clock::now();
     ForwardPropagateForBatch();
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto dt1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1);
-    std::cout<<"forward propagation cost: "<<dt1.count()<<" milliseconds"<<endl;
+    //auto t2 = std::chrono::high_resolution_clock::now();
+    //auto dt1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1);
+    //std::cout<<"forward propagation cost: "<<dt1.count()<<" milliseconds"<<endl;
 
     BackwardPropagateForBatch();
-    auto t3 = std::chrono::high_resolution_clock::now();
-    auto dt2 = std::chrono::duration_cast<std::chrono::milliseconds>(t3-t2);
-    std::cout<<"backward propagation cost: "<<dt2.count()<<" milliseconds"<<endl;
+    //auto t3 = std::chrono::high_resolution_clock::now();
+    //auto dt2 = std::chrono::duration_cast<std::chrono::milliseconds>(t3-t2);
+    //std::cout<<"backward propagation cost: "<<dt2.count()<<" milliseconds"<<endl;
 
     UpdateWeightsAndBiasForBatch();
     auto t4 = std::chrono::high_resolution_clock::now();
-    auto dt3 = std::chrono::duration_cast<std::chrono::milliseconds>(t4-t3);
-    std::cout<<"update w&b cost: "<<dt3.count()<<" milliseconds"<<endl;
+    auto dt3 = std::chrono::duration_cast<std::chrono::milliseconds>(t4-t1);
+    std::cout<<"        batch training cost: "<<dt3.count()<<" milliseconds"<<endl;
+
+    // save training accuracy for batch
+    __outputLayer -> SaveAccuracyAndCostForBatch();
 }
 
 void Network::ForwardPropagateForBatch()
@@ -184,12 +265,11 @@ void Network::ForwardPropagateForBatch()
     // get batch size
     int sample_size = __dataInterface->GetBatchSize();
 
-    // train each sample for the middle layers
+    // output and middle layers
     for(int sample_index=0;sample_index<sample_size;sample_index++)
     {
 	for(auto &i: __middleAndOutputLayers)
 	{
-	    //cout<<"layer id: "<<i->GetID()<<endl;
 	    i->ForwardPropagateForSample(sample_index);
 	}
     }
@@ -215,7 +295,7 @@ void Network::BackwardPropagateForBatch()
 
 void Network::UpdateWeightsAndBiasForBatch()
 {
-    // update w&b for  middle layers
+    // update w&b for output and  middle layers
     for(auto &i: __middleAndOutputLayers)
 	i->UpdateWeightsAndBias();
 }

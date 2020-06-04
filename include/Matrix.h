@@ -67,6 +67,8 @@ public:
     Matrix operator*(float); // multiply by a float
     Matrix operator/(float); // divide by a float
 
+    bool operator==(Matrix &); // matrix equal to each other
+
     std::vector<float>& operator[](size_t);
     size_t size() const;
     void operator()(float(*funtor)(float)); // apply a functor to matrix element, matrix itself will be changed
@@ -96,6 +98,7 @@ public:
     float ElementSum();
     // max element in section
     float MaxInSection(size_t, size_t, size_t, size_t);
+    float MaxInSection(size_t, size_t, size_t, size_t, std::pair<size_t, size_t> &coord);
     float MaxInSectionWithPadding(size_t, size_t, size_t, size_t, float padding_value = -9.e10);
     // average in section
     float AverageInSection(size_t, size_t, size_t, size_t);

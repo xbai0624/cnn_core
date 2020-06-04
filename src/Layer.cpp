@@ -3,6 +3,23 @@
 #include <iostream>
 #include <iomanip>
 
+std::ostream & operator<<(std::ostream &os, const LayerType &t)
+{
+    if(t == LayerType::fullyConnected)
+        os<<"    layer_type=fully connected    ";
+    else if(t == LayerType::cnn)
+        os<<"    layer_type=cnn    ";
+    else if(t == LayerType::pooling)
+        os<<"    layer_type=pooling    ";
+     else if(t == LayerType::input)
+        os<<"    layer_type=input    ";
+     else if(t == LayerType::output)
+        os<<"    layer_type=output    ";
+     else if(t == LayerType::Undefined)
+        os<<"    layer_type=undefined    ";
+    return os;
+}
+
 std::ostream & operator<<(std::ostream &os, const Filter2D &t)
 {
     for(size_t i=0;i<t.__filter.size();i++)

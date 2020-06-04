@@ -44,6 +44,7 @@ enum class LayerType
     output,
     Undefined
 };
+std::ostream & operator<<(std::ostream&, const LayerType &);
 
 enum class LayerDimension
 {
@@ -376,6 +377,8 @@ public:
     virtual int GetCNNStride()=0;
     virtual std::vector<Matrix>* GetWeightMatrix()=0;
     virtual std::vector<Matrix>* GetBiasVector()=0;
+    virtual std::vector<Matrix>* GetWeightMatrixOriginal()=0;
+    virtual std::vector<Matrix>* GetBiasVectorOriginal()=0;
     virtual LayerType GetType()=0;
     virtual LayerDimension GetLayerDimension()=0;
     virtual float GetDropOutFactor()=0;
@@ -391,6 +394,11 @@ public:
     virtual DataInterface * GetDataInterface() = 0;
     virtual Layer* GetNextLayer() = 0;
     virtual Layer* GetPrevLayer() = 0;
+
+    // result check
+    virtual void SaveAccuracyAndCostForBatch() = 0;
+    virtual std::vector<float> &GetAccuracyForBatches() = 0;
+    virtual std::vector<float> &GetCostForBatches() = 0;
 
 private:
     // reserved section

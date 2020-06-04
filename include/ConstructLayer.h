@@ -131,6 +131,8 @@ public:
     virtual int GetCNNStride();
     virtual std::vector<Matrix>* GetWeightMatrix();
     virtual std::vector<Matrix>* GetBiasVector();
+    virtual std::vector<Matrix>* GetWeightMatrixOriginal();
+    virtual std::vector<Matrix>* GetBiasVectorOriginal();
     virtual LayerType GetType();
     virtual LayerDimension GetLayerDimension();
     virtual float GetDropOutFactor();
@@ -148,6 +150,11 @@ public:
     virtual DataInterface * GetDataInterface();
     virtual Layer* GetNextLayer();
     virtual Layer* GetPrevLayer();
+
+    // result check
+    virtual void SaveAccuracyAndCostForBatch();
+    virtual std::vector<float> &GetAccuracyForBatches();
+    virtual std::vector<float> &GetCostForBatches();
 
 private:
     // 1):
@@ -248,6 +255,11 @@ private:
     // 10): 
     // The dimension of this layer (2D or 1D), currently only input layer need to use this parameter
     LayerDimension __layerDimension = LayerDimension::Undefined;
+
+    // 11);
+    // save accuracy for each batch
+    std::vector<float> __accuracyForBatches;
+    std::vector<float> __lossForBatches;
 };
 
 #endif

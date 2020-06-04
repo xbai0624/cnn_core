@@ -470,7 +470,7 @@ std::ostream& operator<<(std::ostream &os, std::vector<float>& A)
 {
     // overload cout for vector
     for(size_t i=0;i<A.size();i++){
-	os<<std::setfill(' ')<<std::setw(20)<<std::setprecision(8)<<A[i];
+	os<<std::setfill(' ')<<std::setw(12)<<std::setprecision(6)<<A[i];
     }
     std::cout<<std::endl;
     return os;
@@ -551,6 +551,21 @@ void Matrix::operator()(float(*functor)(float), size_t r1, size_t r2, size_t c1,
 	    (*this)[i][j] = (*functor)( (*this)[i][j] );
 	}
     }
+}
+
+bool Matrix::operator==(Matrix &m)
+{
+    auto dim = m.Dimension();
+    if(Dimension() != dim) return false;
+
+    for(size_t i=0;i<dim.first;i++)
+        for(size_t j=0;j<dim.second;j++)
+	{
+	    //if(m[i][j] != (*this)[i][j]) return false;
+	    if(abs(m[i][j] - (*this)[i][j]) > 1.e-6) return false;
+	}
+
+    return true;
 }
 
 Matrix Matrix::Reshape(size_t m, size_t n) const
@@ -863,6 +878,32 @@ float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
     }
     return res;
 }
+
+
+float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end, std::pair<size_t, size_t> &coord)
+{
+    // find max element in section [i_start, i_end), and [j_start, j_end)
+    // in this code, we all follow the rule: close front and open end
+    // and all counters start from 0
+    auto dim = Dimension();
+    if((int)i_start < 0 || (int)j_start < 0 || i_end <= i_start || j_end <= j_start || i_end > dim.first || j_end > dim.second){
+	std::cout<<"Error: Max in matrix section: exceeded range."<<std::endl;
+	exit(0);
+    }
+    float res = __M[i_start][j_start];
+    for(size_t i=i_start;i<i_end;i++){
+	for(size_t j=j_start;j<j_end;j++)
+	{
+	    if(res < __M[i][j]){
+		res = __M[i][j];
+		coord.first = i;
+		coord.second = j;
+	    }
+	}
+    }
+    return res;
+}
+
 
 float Matrix::MaxInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end, float padding_value)
 {

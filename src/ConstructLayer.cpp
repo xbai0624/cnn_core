@@ -1585,6 +1585,16 @@ std::vector<Matrix>* ConstructLayer::GetBiasVector()
     return &__biasVectorActive;
 }
 
+std::vector<Matrix>* ConstructLayer::GetWeightMatrixOriginal()
+{
+    return &__weightMatrix;
+}
+
+std::vector<Matrix>* ConstructLayer::GetBiasVectorOriginal()
+{
+    return &__biasVector;
+}
+
 LayerType ConstructLayer::GetType()
 {
     return __type;
@@ -2215,6 +2225,62 @@ std::pair<size_t, size_t> ConstructLayer::GetKernelDimensionCNN()
 {
     // note: both cnn layer and pooling layer use this function; to save memory
     return __kernelDim;
+}
+
+
+void ConstructLayer::SaveAccuracyAndCostForBatch()
+{
+    // accuracy
+    // get labels for current batch
+    std::vector<Matrix> & batch_labels =  __p_data_interface -> GetCurrentBatchLabel();
+    assert(__imageA.size() == batch_labels.size());
+
+    float correct_prediction = 0.;
+    for(size_t i=0;i<batch_labels.size();i++)
+    {
+        Matrix & label_sample = batch_labels[i];
+	Matrix & output_sample = __imageA[i].OutputImageFromKernel[0]; // output layer is 1D
+
+	auto dim = output_sample.Dimension();
+	assert(dim == label_sample.Dimension());
+	assert(dim.second == 1);
+
+        std::pair<size_t, size_t> max_coord;
+	float max = output_sample.MaxInSection(0, dim.first, 0, dim.second, max_coord);
+
+
+	if (max > 0.8)
+	{
+	    Matrix tmp(dim, 0);
+	    tmp[max_coord.first][max_coord.second] = 1.;
+
+	    if(tmp == label_sample)
+	        correct_prediction += 1.0;
+	}
+
+    }
+
+    float accuracy_for_this_batch = correct_prediction / (int)batch_labels.size();
+    __accuracyForBatches.push_back(accuracy_for_this_batch);
+
+    // cost
+    float cost = 0.;
+    for(auto &i: __outputLayerCost)
+        cost += i;
+    cost /= (float)__outputLayerCost.size();
+
+    __lossForBatches.push_back(-cost);
+}
+
+std::vector<float> & ConstructLayer::GetAccuracyForBatches()
+{
+    return __accuracyForBatches;
+}
+
+
+std::vector<float> & ConstructLayer::GetCostForBatches()
+{
+    return __lossForBatches;
 }
 
 

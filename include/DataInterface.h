@@ -49,6 +49,7 @@ public:
 
     // members
     std::pair<size_t, size_t> GetDataDimension(){return __dataDimension;};
+    void Reset();
 
     void test();
 

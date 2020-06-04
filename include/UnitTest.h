@@ -15,6 +15,8 @@ public:
     void TestImagesStruct();
     void TestMatrix();
 
+    void TestDNN();
+
 private:
     // reserved
 };

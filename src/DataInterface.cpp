@@ -135,6 +135,8 @@ void DataInterface::UpdateBatch(vector<Matrix> &data, vector<Matrix> &label)
     // prepare data
     int batch_size = gBatchSize / 2; // because signal + cosmic = gBatchSize
     int offset = gDataIndex * batch_size;
+    assert( (size_t)(offset + batch_size) <= test_training_signal.size() ); // to avoid exceed range issue
+
     for(int i=0;i<batch_size;i++) // signal data
     {
         // data signal
@@ -179,6 +181,14 @@ void DataInterface::UpdateBatch(vector<Matrix> &data, vector<Matrix> &label)
     gDataIndex++;
 }
 
+void DataInterface::Reset()
+{
+    // reset indicators, used in epoch loop
+    // each epoch should start over from the beginning
+    gDataIndex = 0;
+    gLabelIndex = 0;
+}
+
 
 void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 {
@@ -200,7 +210,7 @@ void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 	}
 	assert(vec.size() == 27);
 
-	Matrix m(10, 10);
+	Matrix m(10, 10); // 
 	for(size_t i=0;i<vec.size();i+=3)
 	{
 	    int ii = vec[i];
