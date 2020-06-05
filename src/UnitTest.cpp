@@ -100,7 +100,7 @@ void UnitTest::TestDNN()
 
     // setup a 1D input layer
     LayerParameterList p_list0(LayerType::input, LayerDimension::_1D, data_interface, 0, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0, ActuationFuncType::Sigmoid);
+	    std::pair<size_t, size_t>(0, 0), 0, false, 0.5, Regularization::Undefined, 0, ActuationFuncType::Sigmoid);
     Layer* layer_input = new ConstructLayer(p_list0);
     // NOTE: a data_interface class pointer must be passed to input layer before calling input_layer->Init() function
     //       because Initialization rely on data_interface
@@ -115,7 +115,7 @@ void UnitTest::TestDNN()
 
     // setup an output layer
     LayerParameterList p_list_output(LayerType::output, LayerDimension::_1D, data_interface, 2, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0., Regularization::L2, 0.1, ActuationFuncType::SoftMax);
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::SoftMax);
     Layer* layer_output = new ConstructLayer(p_list_output);
     layer_output -> SetPrevLayer(l3);
     layer_output -> Init();
@@ -152,32 +152,32 @@ void UnitTest::TestDNN()
 		for(auto &i: *(l->GetWeightMatrixOriginal()))
 		    cout<<i<<endl;
 
-		cout<<"active w Matrix: "<<endl;
-		for(auto &i: *(l->GetWeightMatrix()))
-		    cout<<i<<endl;
+		//cout<<"active w Matrix: "<<endl;
+		//for(auto &i: *(l->GetWeightMatrix()))
+		//    cout<<i<<endl;
 
 		cout<<"original bias vector: "<<endl;
 		for(auto &i: *(l->GetBiasVectorOriginal()))
 		    cout<<i<<endl;
 
-		cout<<"active bias vector: "<<endl;
-		for(auto &i: *(l->GetBiasVector()))
-		    cout<<i<<endl;
+		//cout<<"active bias vector: "<<endl;
+		//for(auto &i: *(l->GetBiasVector()))
+		//    cout<<i<<endl;
 
-		cout<<"active Z images: "<<endl;
-		if((l->GetImagesActiveZ()).size() > 0)
-		    for(auto &i: (l->GetImagesActiveZ())[id].OutputImageFromKernel)
-			cout<<i<<endl;
+		//cout<<"active Z images: "<<endl;
+		//if((l->GetImagesActiveZ()).size() > 0)
+		//    for(auto &i: (l->GetImagesActiveZ())[id].OutputImageFromKernel)
+	      //		cout<<i<<endl;
 
 		cout<<"full Z images: "<<endl;
 		if((l->GetImagesFullZ()).size()>0)
 		    for(auto &i: (l->GetImagesFullZ())[id].OutputImageFromKernel)
 			cout<<i<<endl;
 
-		cout<<"active a images: "<<endl;
-		if((l->GetImagesActiveA()).size() > 0)
-		    for(auto &i: (l->GetImagesActiveA())[id].OutputImageFromKernel)
-			cout<<i<<endl;
+		//cout<<"active a images: "<<endl;
+		//if((l->GetImagesActiveA()).size() > 0)
+		//    for(auto &i: (l->GetImagesActiveA())[id].OutputImageFromKernel)
+		//	cout<<i<<endl;
 
 		cout<<"full a images: "<<endl;
 		if((l->GetImagesFullA()).size() > 0)
@@ -185,21 +185,6 @@ void UnitTest::TestDNN()
 			cout<<i<<endl;
 	    };
 
-	    auto show_layer_in_backward = [&](Layer* l, size_t sample_id)
-	    {
-		cout<<"===layer=layer=layer=layer=layer=layer=layer=layer=layer==="<<endl;
-		cout<<"layer id: "<<l->GetID()<<", "<<l->GetType()<<endl;
-
-		cout<<"active delta Matrix: "<<endl;
-		if((l->GetImagesActiveDelta()).size() > 0)
-		for(auto &i: (l->GetImagesActiveDelta())[sample_id].OutputImageFromKernel)
-		    cout<<i<<endl;
-
-		cout<<"full delta Matrix: "<<endl;
-		if((l->GetImagesFullDelta()).size() > 0)
-		    for(auto &i: (l->GetImagesFullDelta())[sample_id].OutputImageFromKernel)
-			cout<<i<<endl;
-	    };
 
 	    // loop sample forward direction
 	    for(size_t sample_id = 0;sample_id < sample_size;sample_id++)
@@ -210,21 +195,115 @@ void UnitTest::TestDNN()
 	    }
 
 	    //==============================================================
-	    // use your eys here.... check forward propagation
+	    // use your eyes here.... check forward propagation
 	    //==============================================================
-
 	    for(size_t id=0;id<sample_size;id++)
 	    {
-		cout<<"checking sample : "<<id<<endl;
+	        // check for each sample
+		cout<<"%%%%%%%%%%%%%%%%%%%%%%% checking sample : "<<id<<" start %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<endl;
 		show_layer_in_forward(layer_input, id);
 		show_layer_in_forward(l3, id);
 		show_layer_in_forward(layer_output, id);
-
+		cout<<"%%%%%%%%%%%%%%%%%%%%%%% checking sample : "<<id<<" end %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<endl;
 		getchar();
 	    }
+	    // check everything is saved properly after batch finished
+	    cout<<"................ Check Batch Results ................."<<endl;
+	    auto check_forward_batch_results= [&](Layer* layer) 
+	    {
+	        cout<<"############## layer: "<<layer->GetID()<<" ##############"<<endl;
+	        cout<<"--------  full image Z: -------  "<<endl;
+		for(auto &i: layer->GetImagesFullZ())
+		{
+		    cout<<"sample:"<<endl;
+		    for(auto &j: i.OutputImageFromKernel)
+		    {
+		        cout<<"    kernel: "<<endl;
+		        cout<<j<<endl;
+		    }
+		}
 
+	        cout<<"--------  full image A: -------  "<<endl;
+		for(auto &i: layer->GetImagesFullA())
+		{
+		    cout<<"sample:"<<endl;
+		    for(auto &j: i.OutputImageFromKernel)
+		    {
+		        cout<<"    kernel: "<<endl;
+		        cout<<j<<endl;
+		    }
+		}
+
+	        cout<<"--------  full image SigmaPrime: -------  "<<endl;
+		for(auto &i: layer->GetImagesFullSigmaPrime())
+		{
+		    cout<<"sample:"<<endl;
+		    for(auto &j: i.OutputImageFromKernel)
+		    {
+		        cout<<"    kernel: "<<endl;
+		        cout<<j<<endl;
+		    }
+		}
+
+	    };
+
+	    check_forward_batch_results(layer_input);
+	    check_forward_batch_results(l3);
+	    check_forward_batch_results(layer_output);
 
 	    // loop sample backward direction
+	    for(size_t sample_id = 0;sample_id < sample_size;sample_id++)
+	    {
+		cout<<"backward propagation sample: "<<sample_id<<endl;
+		layer_output->BackwardPropagateForSample(sample_id);
+		l3->BackwardPropagateForSample(sample_id);
+	    }
+
+            // show backward batch results
+	    auto show_layer_in_backward = [&](Layer* layer)
+	    {
+		cout<<"===layer=layer=layer=layer=layer=layer=layer=layer=layer==="<<endl;
+		cout<<"layer id: "<<layer->GetID()<<", "<<layer->GetType()<<endl;
+
+	        cout<<"--------  full image Delta: -------  "<<endl;
+		for(auto &i: layer->GetImagesFullDelta())
+		{
+		    cout<<"sample:"<<endl;
+		    for(auto &j: i.OutputImageFromKernel)
+		    {
+		        cout<<"    kernel: "<<endl;
+		        cout<<j<<endl;
+		    }
+		}
+	    };
+
+	    auto print_wb_matrix =[&](Layer *l)
+	    {
+		cout<<"W&B matrix of layer id: "<<l->GetID()<<", "<<l->GetType()<<endl;
+		cout<<"original w Matrix: "<<endl;
+		for(auto &i: *(l->GetWeightMatrixOriginal()))
+		    cout<<i<<endl;
+
+		cout<<"original bias vector: "<<endl;
+		for(auto &i: *(l->GetBiasVectorOriginal()))
+		    cout<<i<<endl;
+	    };
+
+	    //==============================================================
+	    //     use your eyes here.... check backward propagation
+	    //==============================================================
+	    cout<<"######################### BACKWARDCHECK ########################"<<endl;
+	    show_layer_in_backward(layer_output);
+	    print_wb_matrix(layer_output);
+	    show_layer_in_backward(l3);
+
+
+	    // check weights and bias update
+	    cout<<"show l3 previous layer a image: "<<endl;
+	    cout<<"show l3 layer delta image: "<<endl;
+	    l3->UpdateWeightsAndBias();
+
+	    layer_output->UpdateWeightsAndBias();
 
 
 	} //

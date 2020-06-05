@@ -174,10 +174,12 @@ void ConstructLayer::BatchInit()
     int batch_size = __p_data_interface->GetBatchSize();
     __imageA.resize(batch_size);
     __imageZ.resize(batch_size);
+    __imageSigmaPrime.resize(batch_size);
     __imageDelta.resize(batch_size);
 
     __imageAFull.resize(batch_size);
     __imageZFull.resize(batch_size);
+    __imageSigmaPrimeFull.resize(batch_size);
     __imageDeltaFull.resize(batch_size);
     __outputLayerCost.resize(batch_size);
 
@@ -529,6 +531,20 @@ void  ConstructLayer::InitWeightsAndBias()
     __weightMatrix.clear();
     __biasVector.clear();
 
+    if(__p_data_interface == nullptr)
+    {
+        std::cout<<__func__<<" error: layer Need DataInterface already set."
+	         <<std::endl;
+        exit(0);
+    }
+    int batch_size = __p_data_interface->GetBatchSize();
+    int N = __p_data_interface->GetNumberOfBatches();
+
+    // total_entries is used to randomly initialize weight matrix, 
+    // using a Gaussian distribution, wieth mean=0, sigma = 1/sqrt(total_entries)
+    float total_entries = (float)batch_size * (float)N; // use this one, it is better
+    //float total_entries = (float)batch_size;          // this one is not as good as the above one
+
     if(__type == LayerType::fullyConnected || __type == LayerType::output) // output layer is also a fully connected layer
     {
 	int n_prev = 0;
@@ -544,7 +560,7 @@ void  ConstructLayer::InitWeightsAndBias()
 	    n_prev = __prevLayer->GetNumberOfNeurons();
 
 	Matrix w(n_curr, n_prev);
-	w.RandomGaus(0., 1./sqrt((float)n_curr)); // (0, sqrt(n_neuron)) normal distribution
+	w.RandomGaus(0., 1./sqrt((float)total_entries)); // (0, sqrt(n_neuron)) normal distribution
 	__weightMatrix.push_back(w);
 
 	Matrix b(n_curr, 1);
@@ -553,11 +569,11 @@ void  ConstructLayer::InitWeightsAndBias()
     }
     else if(__type == LayerType::cnn)
     {
-	auto norm_factor = __p_data_interface->GetBatchSize();
+	//auto norm_factor = __p_data_interface->GetBatchSize();
 	for(size_t i=0;i<__n_kernels_cnn;i++)
 	{
 	    Matrix w(__kernelDim);
-	    w.RandomGaus(0., 1./sqrt(norm_factor));
+	    w.RandomGaus(0., 1./sqrt(total_entries));
 	    __weightMatrix.push_back(w);
 
 	    Matrix b(1, 1);
@@ -569,7 +585,7 @@ void  ConstructLayer::InitWeightsAndBias()
     {
         for(size_t i=0;i<__n_kernels_cnn;i++) // pooling used cnn symbol
 	{
-	    Matrix w(__kernelDim, 1);
+	    Matrix w(__kernelDim, 1); // pooling layer weight and bias matrix are not used, so set them to 1
 	    __weightMatrix.push_back(w);
 
 	    Matrix b(1, 1, 0);
@@ -622,6 +638,9 @@ void ConstructLayer::ForwardPropagateForSample(int sample_index)
 	}
     }
     UpdateImagesA(sample_index);
+
+    // after finished A and Z matrix, get Sigma^\prime matrix
+    UpdateImagesSigmaPrime(sample_index);
 }
 
 void ConstructLayer::BackwardPropagateForSample(int sample_index)
@@ -674,7 +693,9 @@ static double cross_entropy(Matrix &A, Matrix &Y)
     double res = 0.;
     for(size_t i=0;i<dim.first;i++)
     {
-	res += Y[i][0] * log(A[i][0]) + (1. - Y[i][0]) * log(1. - A[i][0]);
+	if(A[i][0] ==0 || A[i][0] == 1) res += 0;
+	else
+	    res += Y[i][0] * log(A[i][0]) + (1. - Y[i][0]) * log(1. - A[i][0]);
     }
 
     return res; // no minus symbol here, 
@@ -795,11 +816,21 @@ std::vector<Images>& ConstructLayer::GetImagesFullA()
     return __imageAFull;
 }
 
+std::vector<Images>& ConstructLayer::GetImagesActiveSigmaPrime()
+{
+    return __imageSigmaPrime;
+}
+
+std::vector<Images>& ConstructLayer::GetImagesFullSigmaPrime()
+{
+    return __imageSigmaPrimeFull;
+}
 
 void ConstructLayer::FillBatchDataToInputLayerA()
 {
     // if this layer is input layer, then fill the 'a' matrix directly with input image data
-    auto input_data = __p_data_interface->GetCurrentBatchData();
+    std::vector<Matrix> & input_data = __p_data_interface->GetCurrentBatchData();
+    //cout<<">>>: "<<input_data.size()<<" samples in current batch from data interface"<<endl;
 
     // first clear the previous batch
     __imageA.clear(); // input layer dropout is not used
@@ -957,6 +988,88 @@ void ConstructLayer::UpdateImagesA(int sample_id)
     {
     }
 }
+
+
+void ConstructLayer::UpdateImagesSigmaPrime(int sample_id)
+{
+    // __imageSigmaPrime shold only store images from all active neurons, the matching info can be achieved from filter matrix
+    // __imageSigmaPrimeFull stores images from all neurons (active + inactive), with inactive set to 0.
+    //    **** on batch level, the filter matrix stays the same, so no need to worry the change of filter matrix inside a batch
+
+    // extract the sigma^\prime matrices from neurons for current traning sample
+    Images sample_image_SigmaPrime;
+    Images sample_image_SigmaPrime_full;
+
+    if(__type == LayerType::fullyConnected || __type == LayerType::output) 
+    {
+	// for fully connected layer; output layer is also a fully connected layer
+	for(size_t k=0;k<__neuronDim.k;k++) // kernel
+	{
+	    Matrix SigP( __neuronDim.i, __neuronDim.j, 0);
+	    //cout<<"A before filling"<<endl<<A<<endl;
+	    for(size_t i=0;i<__neuronDim.i;i++){
+		for(size_t j=0;j<__neuronDim.j;j++)
+		{
+		    auto s_vector = __neurons[k][i][j]->GetSigmaPrimeVector();
+		    if(__neurons[k][i][j]->IsActive())
+		    {
+			SigP[i][j] = s_vector[sample_id];
+		    }
+		    else
+		    {
+		        // if neuron is inactive, set it to 0
+			SigP[i][j] = 0;
+		    }
+		}
+	    }
+	    // save full image
+	    sample_image_SigmaPrime_full.OutputImageFromKernel.push_back(SigP);
+	    //cout<<"A after filling: "<<endl<<A<<endl;
+
+	    // only save active elements
+	    Matrix R = filterMatrix(SigP, __activeFlag[k]);
+	    sample_image_SigmaPrime.OutputImageFromKernel.push_back(R);
+
+	    assert(R.Dimension().first  == __activeNeuronDim.i);
+	    assert(R.Dimension().second == __activeNeuronDim.j);
+	}
+	//__imageA.push_back(sample_image_A); // obsolete
+	__imageSigmaPrime[sample_id] = sample_image_SigmaPrime;
+	__imageSigmaPrimeFull[sample_id] = sample_image_SigmaPrime_full;
+    }
+    else if(__type == LayerType::cnn || __type == LayerType::pooling ) // for cnn layer and pooling layer
+    {
+	// for cnn, drop out happens on kernels (weight matrix)
+	// so the neurons are all active
+	for(size_t k=0;k<__neuronDim.k;k++) // kernel
+	{
+	    Matrix SigP( __neuronDim.i, __neuronDim.j);
+	    for(size_t i=0;i<__neuronDim.i;i++){
+		for(size_t j=0;j<__neuronDim.j;j++)
+		{
+		    auto s_vector = __neurons[k][i][j]->GetSigmaPrimeVector();
+		    if(__neurons[k][i][j]->IsActive())
+		    { 
+			SigP[i][j] = s_vector[sample_id];
+		    }
+		    else
+		    {
+			SigP[i][j] = 0;
+		    }
+		}
+	    }
+	    sample_image_SigmaPrime.OutputImageFromKernel.push_back(SigP); // no need to filter
+	    sample_image_SigmaPrime_full.OutputImageFromKernel.push_back(SigP); // no need to filter
+	}
+	//__imageA.push_back(sample_image_A);
+	__imageSigmaPrime[sample_id] = sample_image_SigmaPrime;
+	__imageSigmaPrimeFull[sample_id] = sample_image_SigmaPrime;
+    }
+    else // reserved for other layer types
+    {
+    }
+}
+
 
 std::vector<Images>& ConstructLayer::GetImagesActiveZ()
 {
@@ -1549,10 +1662,12 @@ void ConstructLayer::ClearImage()
 {
     __imageA.clear();
     __imageZ.clear();
+    __imageSigmaPrime.clear();
     __imageDelta.clear();
 
     __imageAFull.clear();
     __imageZFull.clear();
+    __imageSigmaPrimeFull.clear();
     __imageDeltaFull.clear();
 
     __wGradient.clear();
@@ -2248,8 +2363,8 @@ void ConstructLayer::SaveAccuracyAndCostForBatch()
         std::pair<size_t, size_t> max_coord;
 	float max = output_sample.MaxInSection(0, dim.first, 0, dim.second, max_coord);
 
-
-	if (max > 0.8)
+        float confidence_threshold = 0.8;
+	if (max > confidence_threshold)
 	{
 	    Matrix tmp(dim, 0);
 	    tmp[max_coord.first][max_coord.second] = 1.;

@@ -74,6 +74,7 @@ public:
     std::vector<double> & GetAVector();
     std::vector<double> & GetDeltaVector();
     std::vector<double> & GetZVector();
+    std::vector<double> & GetSigmaPrimeVector();
     NeuronCoord GetCoord();
 
     // 

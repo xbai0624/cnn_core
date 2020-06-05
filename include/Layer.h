@@ -327,13 +327,16 @@ public:
     virtual void InitNeurons()=0;
     virtual void InitWeightsAndBias()=0;
 
-    // extract a value from neurons and re-organize these values in matrix form, only for current training sample
+    // extract a value from neurons and re-organize these values in matrix form,
     virtual std::vector<Images>& GetImagesActiveA()=0;
     virtual std::vector<Images>& GetImagesFullA()=0;
-    // extract z value from neurons and re-organize these values in matrix form, only for current training sample
+    // extract z value from neurons and re-organize these values in matrix form,
     virtual std::vector<Images>& GetImagesActiveZ()=0;
     virtual std::vector<Images>& GetImagesFullZ()=0;
-    // extract delta value from neurons and re-organize these values in matrix form, only for current training sample
+    // extract sigma^\prime value from neurons and re-organize these values in matrix form,
+    virtual std::vector<Images>& GetImagesActiveSigmaPrime()=0;
+    virtual std::vector<Images>& GetImagesFullSigmaPrime()=0;
+    // extract delta value from neurons and re-organize these values in matrix form,
     virtual std::vector<Images>& GetImagesActiveDelta()=0;
     virtual std::vector<Images>& GetImagesFullDelta()=0;
 

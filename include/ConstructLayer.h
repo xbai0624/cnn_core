@@ -81,15 +81,19 @@ public:
     // interal interfaces
     virtual void ProcessSample();
 
-    // extract a value from neurons and re-organize these values in matrix form, only for current training sample
+    // extract a value from neurons and re-organize these values in matrix form,
     virtual std::vector<Images>& GetImagesActiveA(); // for drop out algorithm. If drop out not in use, 
     virtual std::vector<Images>& GetImagesFullA();   // then these two (Active, Full) function results are the same
     void UpdateImagesA(int sample_index);
-    // extract z value from neurons and re-organize these values in matrix form, only for current training sample
+    // extract z value from neurons and re-organize these values in matrix form,
     virtual std::vector<Images>& GetImagesActiveZ();
     virtual std::vector<Images>& GetImagesFullZ();
     void UpdateImagesZ(int sample_index);
-    // extract delta value from neurons and re-organize these values in matrix form, only for current batch
+    // extract sigma^\prime value from neurons and re-organize these values in matrix form,
+    virtual std::vector<Images>& GetImagesActiveSigmaPrime();
+    virtual std::vector<Images>& GetImagesFullSigmaPrime();
+    void UpdateImagesSigmaPrime(int sample_index);
+    // extract delta value from neurons and re-organize these values in matrix form,
     // !!::NOTE::!!  during backpropagation, delta need to be calculated over all batch samples,
     // !!::NOTE::!!  b/c Cost function is a sum of all batch samples
     // !!::NOTE::!!  this is not the same with A & Z images, they are calculated for each sample
@@ -219,10 +223,12 @@ private:
     // the following three only save outputs from active neurons
     std::vector<Images> __imageA;
     std::vector<Images> __imageZ;
+    std::vector<Images> __imageSigmaPrime;
     std::vector<Images> __imageDelta;
     // the following three save outputs from all neruons (active + inactive)
     std::vector<Images> __imageAFull;
     std::vector<Images> __imageZFull;
+    std::vector<Images> __imageSigmaPrimeFull;
     std::vector<Images> __imageDeltaFull;
     std::vector<double> __outputLayerCost;
 

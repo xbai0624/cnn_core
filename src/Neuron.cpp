@@ -497,24 +497,20 @@ void Neuron::UpdateDeltaOutputLayer(int sample_index)
     //cout<<a_i<<endl;
 
     // sigma^\prime for current sample
-    float sigma_prime_i = __sigmaPrime[sample_index];
+    //float sigma_prime_i = __sigmaPrime[sample_index]; // obsolete
     //cout<<"---"<<sigma_prime_i<<endl;
 
     // solve for dC/da, which is dependent on the type of cost function
-    float dc_over_da = 0;
+    float delta = 0;
     if(cost_func_type == CostFuncType::cross_entropy)
     {
-        dc_over_da = a_i  - y_i;
+        delta = a_i  - y_i;
     }
     else 
     {
-        // to be implemented
-        dc_over_da = a_i - y_i; 
+        // other types of cost function: to be implemented
+        delta = a_i - y_i; 
     }
-
-    // delta for current sample current neuron
-    float delta = dc_over_da * sigma_prime_i; 
-    //cout<<"---"<<delta<<endl;
 
     // save delta for this batch this neuron
     __delta[sample_index] = delta;
@@ -907,6 +903,14 @@ std::vector<double>& Neuron::GetZVector()
 {
     return __z;
 }
+
+
+std::vector<double>& Neuron::GetSigmaPrimeVector()
+{
+    return __sigmaPrime;
+}
+
+
 
 NeuronCoord Neuron::GetCoord()
 {
