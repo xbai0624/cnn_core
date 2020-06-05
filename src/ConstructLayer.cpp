@@ -1710,6 +1710,17 @@ std::vector<Matrix>* ConstructLayer::GetBiasVectorOriginal()
     return &__biasVector;
 }
 
+std::vector<Images> & ConstructLayer::GetWeightGradients()
+{
+    return __wGradient;
+}
+
+std::vector<Images> & ConstructLayer::GetBiasGradients()
+{
+    return __bGradient;
+}
+
+
 LayerType ConstructLayer::GetType()
 {
     return __type;
@@ -2127,7 +2138,11 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
 	    {
 		for(size_t j=0;j<dimKernel.second;j++)
 		{
-		    // gradient descent part
+		    // It is a convolution value with 'a_previous_layer' as the input image and 'delta_this_layer' as the "kernel"
+		    // step 1) (i, j) is the w(i, j) of current layer weight matrix -> need to find the corresponding coord in 'a_previous_layer'
+		    //size_t i_a_prev = i*__cnnStride; // now __cnnStride is set to 1, and is not adjustable
+		    //size_t j_a_prev = j*__cnnStride; // need to derive a detailed expression for __cnnStride > 1
+		    // step 2) gradient descent part
 		    double _tmp = 0;
 		    for(auto &_ap: a_matrix){
 			_tmp += Matrix::GetCorrelationValue(_ap, delta, i, j);
@@ -2151,7 +2166,7 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
 
 void ConstructLayer::UpdateWeightsAndBiasCNN()
 {
-    // after finishing one training sample, update weights and bias gradient, (CNN layer)
+    // after finishing one training batch, update weights and bias gradient, (CNN layer)
     // cnn layer is different with FC layer. For FC layer, different 
     // neurons have different weights, however, for CNN layer, different
     // neurons in one image share the same weights and bias.
@@ -2159,7 +2174,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
     // using this function in layer class, you need to loop over every 
     // neuron for FC layer, but you should not loop over neruons in 
     // the same image for CNN layer, you should just use only one neuron,
-    // anyone would be fine, instead you need to loop over images.
+    // any neuron would be fine, instead you need to loop over images. --- This is old design
 
     // after finishing one batch, update weights and bias, CNN layer
     size_t M = __imageDelta.size(); // batch size
@@ -2168,32 +2183,63 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	exit(0);
     }
 
+    // in case use drop out, need to filter out all inactive elements
+    // Get filter Matrix from Filter2D structure
+    assert(__activeFlag.size() == __weightMatrix.size());
+    auto convertFilterToMatrix = [&](Filter2D & F) -> Matrix
+    {
+	auto dim = F.Dimension();
+	Matrix _M(dim, 0);
+	for(size_t i=0;i<dim.first;i++)
+	{
+	    for(size_t j=0;j<dim.second;j++)
+	    {
+		if(F[i][j]) _M[i][j] = 1;
+	    }
+	}
+	return _M;
+    };
+
     // loop for kernel
-    size_t nKernel = __weightMatrixActive.size();
+    size_t nKernel = __weightMatrix.size();
     for(size_t k=0;k<nKernel;k++)
     {
+        // 1) get gradient
 	// gradient descent
-	Matrix dw(__weightMatrixActive[k].Dimension());
+	Matrix dw(__weightMatrix[k].Dimension());
 	// loop for batch
 	for(size_t i=0;i<M;i++){ 
 	    dw  = dw + __wGradient[i].OutputImageFromKernel[k];
 	}
 	dw = dw * float(__learningRate/(double)M); // gradients average over batch size
 
+        // Hadamard F to mask out all inactive elements
+	Matrix F = convertFilterToMatrix(__activeFlag[k]);
+	assert(F.Dimension() == (__weightMatrix[k]).Dimension());
+	dw = dw^F; // for safe reason, put it here (should have no effect)
+
 	// regularization part
 	double f_regularization = 0;
-	if(__regularizationMethod == Regularization::L2){
-	    f_regularization = 1 - __learningRate * __regularizationParameter / (float)M;
-	    (__weightMatrixActive[k]) = (__weightMatrixActive[k])*f_regularization;
-	    (__weightMatrixActive[k]) = (__weightMatrixActive[k]) - dw;
+	if(__regularizationMethod == Regularization::L2)
+	{
+	    // obsolete
+	    //f_regularization = 1 - __learningRate * __regularizationParameter / (float)M;
+	    //(__weightMatrix[k]) = (__weightMatrix[k])*f_regularization;
+	    //(__weightMatrix[k]) = (__weightMatrix[k]) - dw;
+
+	    Matrix regularization_M = (__weightMatrix[k]^F) * (__learningRate * __regularizationParameter/((float)M));
+	    Matrix total_correction_M = regularization_M + dw; // dw already have learing rate multiplied
+	    __weightMatrix[k] = __weightMatrix[k] - total_correction_M;
 	}
-	else if(__regularizationMethod == Regularization::L1){
+	else if(__regularizationMethod == Regularization::L1)
+	{
 	    Matrix tmp = (__weightMatrixActive[k]);
 	    tmp(&SGN);
+	    tmp = tmp^F; // hadamard operation to mask out all inactive elements
 	    tmp = tmp * (__learningRate*__regularizationParameter/(float)M);
 	    //(*__w) = (*__w) - tmp - dw;
-	    (__weightMatrixActive[k]) = (__weightMatrixActive[k]) - dw;
-	    (__weightMatrixActive[k]) = (__weightMatrixActive[k]) - tmp;
+	    (__weightMatrix[k]) = (__weightMatrix[k]) - dw;
+	    (__weightMatrix[k]) = (__weightMatrix[k]) - tmp;
 	}
 	else {
 	    std::cout<<"Error: update CNN weights, unsupported regularizaton method."<<std::endl;
@@ -2385,6 +2431,9 @@ void ConstructLayer::SaveAccuracyAndCostForBatch()
     cost /= (float)__outputLayerCost.size();
 
     __lossForBatches.push_back(-cost);
+
+    std::cout<<"............ accuracy for batch training: "<<accuracy_for_this_batch<<endl;
+    std::cout<<"............    losss for batch training: "<<-cost<<endl;
 }
 
 std::vector<float> & ConstructLayer::GetAccuracyForBatches()

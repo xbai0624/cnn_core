@@ -146,9 +146,9 @@ public:
     // concatenate a vector of matrix in j direction / horizontally
     static Matrix ConcatenateMatrixByJ(std::vector<Matrix> &);
     // Get element (i, j) of the correlated matrix, A is input, B is kernel
-    static float GetCorrelationValue(Matrix &A, Matrix &B, size_t i, size_t j);
+    static float GetCorrelationValue(Matrix &A, Matrix &B, size_t A_i, size_t A_j);
     // Get element (i, j) of the convoluted matrix, A is input, B is kernel
-    static float GetConvolutionValue(Matrix &A, Matrix &B, size_t i, size_t j);
+    static float GetConvolutionValue(Matrix &A, Matrix &B, size_t A_i, size_t A_j);
 
 private:
     std::vector<std::vector<float>> __M;

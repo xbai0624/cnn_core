@@ -23,7 +23,9 @@ void UnitTest::Test()
     //TestImagesStruct();
     //TestMatrix();
 
-    TestDNN();
+    //TestDNN();
+
+    TestCNN();
 }
 
 
@@ -311,6 +313,266 @@ void UnitTest::TestDNN()
 }
 
 
+
+void UnitTest::TestCNN()
+{
+    // step1: setup all layers.............................................................................................................
+    // 1) Data interface, this is a tool class, for data prepare
+    DataInterface *data_interface = new DataInterface("unit_test_data/data_signal.dat", "unit_test_data/data_cosmic.dat", LayerDimension::_2D);
+
+    // 3) input layer   ID=0
+    LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0, ActuationFuncType::Undefined);
+    Layer* layer_input = new ConstructLayer(p_list0);
+    layer_input->Init();
+
+    // 4) middle layer 1 : cnn layer ID=1
+    LayerParameterList p_list1(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 2, 
+	    std::pair<size_t, size_t>(2, 2), 0.1, true, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu);
+    Layer *l1 = new ConstructLayer(p_list1);
+    l1->SetPrevLayer(layer_input);
+    l1->Init();
+
+    // 4) middle layer 1 : fc layer ID=6
+    LayerParameterList p_list6(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 10, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu);
+    Layer *l6 = new ConstructLayer(p_list6);
+    l6->SetPrevLayer(l1);
+    l6->Init();
+
+    // 5) output layer ID = 7
+    LayerParameterList p_list_output(LayerType::output, LayerDimension::_1D, data_interface, 2, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0., Regularization::L2, 0.1, ActuationFuncType::SoftMax);
+    Layer* layer_output = new ConstructLayer(p_list_output);
+    layer_output -> SetPrevLayer(l6);
+    layer_output -> Init();
+
+    // 6) connect all layers; SetNextLayer must be after all layers have finished initialization
+    //                        input layer not needed to set, input layer has no update on w & b
+    //                        input layer is just for data transfer (prepare)
+    l1->SetNextLayer(l6);
+    //l2->SetNextLayer(l3);
+    l6->SetNextLayer(layer_output); // This line is ugly, to be improved
+
+
+    // step 2: forward propagate
+    data_interface -> Reset();
+    layer_input->EpochInit();
+    l1->EpochInit();
+    l6->EpochInit();
+    layer_output->EpochInit();
+
+    //layer_input->BatchInit();
+    l1->BatchInit();
+    l6->BatchInit();
+    layer_output->BatchInit();
+
+
+    data_interface->GetNewBatchData();
+    data_interface->GetNewBatchLabel();
+    layer_input -> FillBatchDataToInputLayerA();
+
+
+    int sample_size = data_interface->GetBatchSize();
+    for(int i=0;i<sample_size;i++)
+    {
+        l1->ForwardPropagateForSample(i);
+        l6->ForwardPropagateForSample(i);
+	layer_output->ForwardPropagateForSample(i);
+    }
+
+    // helper functions
+    auto print_a_images = [&](Layer *l)
+    {
+        // print a images
+	cout<<"XXXXXX::'A' images from layer: "<<l->GetID()<<endl;
+        auto images = l->GetImagesFullA();
+	int sample_IIID = 0;
+	for(auto &i: images)
+	{
+	    cout<<"---------------------- sample id: "<<sample_IIID<<endl;
+	    int kernel_id = 0;
+	    for(auto &j: i.OutputImageFromKernel)
+	    {
+	        cout<<"----kernel id: "<<kernel_id<<endl;
+	        cout<<j<<endl;
+		kernel_id++;
+	    }
+	    sample_IIID++;
+	}
+    };
+    auto print_z_images = [&](Layer *l)
+    {
+        // print a images
+	cout<<"XXXXXX::'Z' images from layer: "<<l->GetID()<<endl;
+        auto images = l->GetImagesFullZ();
+	int sample_IIID = 0;
+	for(auto &i: images)
+	{
+	    cout<<"---------------------- sample id: "<<sample_IIID<<endl;
+	    int kernel_id = 0;
+	    for(auto &j: i.OutputImageFromKernel)
+	    {
+	        cout<<"----kernel id: "<<kernel_id<<endl;
+	        cout<<j<<endl;
+		kernel_id++;
+	    }
+	    sample_IIID++;
+	}
+    };
+
+
+    auto print_W_B_images = [&](Layer *l)
+    {
+        // print a images
+	cout<<"XXXXXX::W&B matrix from layer: "<<l->GetID()<<endl;
+        auto w_images = l->GetWeightMatrix();
+	auto b_images = l->GetBiasVector();
+	assert((*w_images).size() == (*b_images).size());
+
+	for(size_t kernel = 0;kernel<(*w_images).size();kernel++)
+	{
+	    cout<<"----kernel id: "<<kernel<<endl;
+	    cout<<"w"<<kernel<<":"<<endl;
+	    cout<<(*w_images)[kernel]<<endl;
+	    cout<<"b"<<kernel<<":"<<endl;
+	    cout<<(*b_images)[kernel]<<endl;
+	}
+    };
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    //print_W_B_images(layer_input);
+    //print_z_images(layer_input);
+    //print_a_images(layer_input);
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    //print_W_B_images(l1);
+    //print_z_images(l1);
+    //print_a_images(l1);
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    //print_W_B_images(l6);
+    //print_z_images(l6);
+    //print_a_images(l6);
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    //print_W_B_images(layer_output);
+    //print_z_images(layer_output);
+    //print_a_images(layer_output);
+
+
+    // backward propagation
+    for(int i=0;i<sample_size;i++)
+    {
+        // must inverse order
+	layer_output->BackwardPropagateForSample(i);
+        l6->BackwardPropagateForSample(i);
+        l1->BackwardPropagateForSample(i);
+    }
+
+
+    auto print_sigmaPrime_images = [&](Layer *l)
+    {
+        // print a images
+	cout<<"XXXXXX::'SigmaPrime' images from layer: "<<l->GetID()<<endl;
+        auto images = l->GetImagesFullSigmaPrime();
+	int sample_IIID = 0;
+	for(auto &i: images)
+	{
+	    cout<<"---------------------- sample id: "<<sample_IIID<<endl;
+	    int kernel_id = 0;
+	    for(auto &j: i.OutputImageFromKernel)
+	    {
+	        cout<<"----kernel id: "<<kernel_id<<endl;
+	        cout<<j<<endl;
+		kernel_id++;
+	    }
+	    sample_IIID++;
+	}
+    };
+
+    auto print_delta_images = [&](Layer *l)
+    {
+        // print a images
+	cout<<"XXXXXX::'Delta' images from layer: "<<l->GetID()<<endl;
+        auto images = l->GetImagesFullDelta();
+	int sample_IIID = 0;
+	for(auto &i: images)
+	{
+	    cout<<"---------------------- sample id: "<<sample_IIID<<endl;
+	    int kernel_id = 0;
+	    for(auto &j: i.OutputImageFromKernel)
+	    {
+	        cout<<"----kernel id: "<<kernel_id<<endl;
+	        cout<<j<<endl;
+		kernel_id++;
+	    }
+	    sample_IIID++;
+	}
+    };
+
+    auto print_w_b_gradients = [&](Layer *l)
+    {
+	// print a images
+	cout<<"XXXXXX::'w & b' gradients from layer: "<<l->GetID()<<endl;
+	auto w_images = l->GetWeightGradients();
+	auto b_images = l->GetBiasGradients();
+	assert(w_images.size() == b_images.size());
+	for(size_t i=0;i<w_images.size();i++)
+	{
+	    cout<<"---------------------- sample id: "<<i<<endl;
+	    int kernel_id = 0;
+	    for(auto &j: w_images[i].OutputImageFromKernel)
+	    {
+		cout<<"----kernel id: "<<kernel_id<<endl;
+		cout<<j<<endl;
+		kernel_id++;
+	    }
+	    kernel_id = 0;
+	    for(auto &j: b_images[i].OutputImageFromKernel)
+	    {
+		cout<<"----kernel id: "<<kernel_id<<endl;
+		cout<<j<<endl;
+		kernel_id++;
+	    }
+	}
+    };
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    //print_a_images(layer_output);
+    //print_sigmaPrime_images(layer_output); 
+    //print_delta_images(layer_output);
+    //print_W_B_images(layer_output);
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    //print_a_images(l6);
+    //print_sigmaPrime_images(l6); 
+    //print_delta_images(l6);
+    //print_W_B_images(l6);
+
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    //print_a_images(l1);
+    //print_sigmaPrime_images(l1); 
+    print_delta_images(l1);
+    print_W_B_images(l1);
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    print_a_images(layer_input); 
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    print_w_b_gradients(l1); 
+
+    // update weights and gradients
+    layer_output->UpdateWeightsAndBias();
+    l6->UpdateWeightsAndBias();
+    l1->UpdateWeightsAndBias();
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    print_w_b_gradients(l1); 
+
+
+}
 
 
 

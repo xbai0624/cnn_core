@@ -16,6 +16,7 @@ public:
     void TestMatrix();
 
     void TestDNN();
+    void TestCNN();
 
 private:
     // reserved

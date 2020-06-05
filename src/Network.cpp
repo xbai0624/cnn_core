@@ -29,17 +29,16 @@ void Network::Init()
     __numberOfEpoch = 10;
 }
 
-/*
 void Network::ConstructLayers()
 {
-    // Network structure: {Image->Input->CNN->pooling->CNN->pooling->FC->FC->Output}
+    // Network structure: {Image->Input->CNN->pooling->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
     DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D);
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0, ActuationFuncType::Sigmoid);
+	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0, ActuationFuncType::Undefined);
     Layer* layer_input = new ConstructLayer(p_list0);
     // NOTE: a data_interface class pointer must be passed to input layer before calling input_layer->Init() function
     //       because Initialization rely on data_interface
@@ -47,48 +46,23 @@ void Network::ConstructLayers()
 
     // 4) middle layer 3 : cnn layer ID=1
     LayerParameterList p_list4(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(2, 2), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
+	    std::pair<size_t, size_t>(3, 3), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu);
     Layer *l2 = new ConstructLayer(p_list4);
     l2->SetPrevLayer(layer_input);
     l2->Init();
   
     // 4) middle layer 2 : pooling layer ID=2
     LayerParameterList p_list7(LayerType::pooling, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0., ActuationFuncType::Sigmoid);
+	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0., ActuationFuncType::Relu);
     Layer *l5 = new ConstructLayer(p_list7);
     l5->SetPrevLayer(l2);
     l5->Init();
-
-
-    // 4) middle layer 2 : cnn layer ID=3
-    LayerParameterList p_list3(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(2, 2), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
-    Layer *l1 = new ConstructLayer(p_list3);
-    l1->SetPrevLayer(l5);
-    l1->Init();
-
- 
-    // 4) middle layer 2 : pooling layer ID=4
-    LayerParameterList p_list6(LayerType::pooling, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(2, 2), 0., false, 0., Regularization::Undefined, 0., ActuationFuncType::Sigmoid);
-    Layer *l4 = new ConstructLayer(p_list6);
-    l4->SetPrevLayer(l1);
-    l4->Init();
-
-
-    // 4) middle layer 1 : fc layer ID=5
-    LayerParameterList p_list5(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 40, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
-    Layer *l3 = new ConstructLayer(p_list5);
-    l3->SetPrevLayer(l4);
-    l3->Init();
-
  
     // 4) middle layer 1 : fc layer ID=6
-    LayerParameterList p_list1(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 20, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
+    LayerParameterList p_list1(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 4, 0, 
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu);
     Layer *l0 = new ConstructLayer(p_list1);
-    l0->SetPrevLayer(l3);
+    l0->SetPrevLayer(l5);
     l0->Init();
 
     // 5) output layer ID = 7
@@ -102,10 +76,7 @@ void Network::ConstructLayers()
     //                        input layer not needed to set, input layer has no update on w & b
     //                        input layer is just for data transfer (prepare)
     l2->SetNextLayer(l5);
-    l5->SetNextLayer(l1);
-    l1->SetNextLayer(l4);
-    l4->SetNextLayer(l3);
-    l3->SetNextLayer(l0);
+    l5->SetNextLayer(l0);
     l0->SetNextLayer(layer_output); // This line is ugly, to be improved
 
     // 7) save all constructed layers
@@ -113,15 +84,12 @@ void Network::ConstructLayers()
     __outputLayer = layer_output;
     __middleAndOutputLayers.push_back(l2); // must be pushed in order
     __middleAndOutputLayers.push_back(l5); // must be pushed in order
-    __middleAndOutputLayers.push_back(l1);
-    __middleAndOutputLayers.push_back(l4);
-    __middleAndOutputLayers.push_back(l3);
     __middleAndOutputLayers.push_back(l0);
     __middleAndOutputLayers.push_back(layer_output);
     //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
 }
-*/
+
 /*
 void Network::ConstructLayers() // test purelly fully connected
 {
@@ -171,26 +139,34 @@ void Network::ConstructLayers() // test purelly fully connected
 }
 */
 
+/*
 void Network::ConstructLayers() // test fully connected + cnn
 {
     // Network structure: {Image->Input->FC->FC->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
-    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_1D);
+    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D);
 
     // 3) input layer   ID=0
-    LayerParameterList p_list0(LayerType::input, LayerDimension::_1D, data_interface, 0, 0, 
+    LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
 	    std::pair<size_t, size_t>(0, 0), 0, false, 0, Regularization::Undefined, 0, ActuationFuncType::Undefined);
     Layer* layer_input = new ConstructLayer(p_list0);
     // NOTE: a data_interface class pointer must be passed to input layer before calling input_layer->Init() function
     //       because Initialization rely on data_interface
     layer_input->Init();
 
+    // 4) middle layer 1 : cnn layer ID=1
+    LayerParameterList p_list1(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 2, 
+	    std::pair<size_t, size_t>(2, 2), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu);
+    Layer *l1 = new ConstructLayer(p_list1);
+    l1->SetPrevLayer(layer_input);
+    l1->Init();
+
     // 4) middle layer 1 : fc layer ID=6
     LayerParameterList p_list6(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 10, 0, 
 	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu);
     Layer *l6 = new ConstructLayer(p_list6);
-    l6->SetPrevLayer(layer_input);
+    l6->SetPrevLayer(l1);
     l6->Init();
 
     // 5) output layer ID = 7
@@ -203,21 +179,21 @@ void Network::ConstructLayers() // test fully connected + cnn
     // 6) connect all layers; SetNextLayer must be after all layers have finished initialization
     //                        input layer not needed to set, input layer has no update on w & b
     //                        input layer is just for data transfer (prepare)
-    //l1->SetNextLayer(l2);
+    l1->SetNextLayer(l6);
     //l2->SetNextLayer(l3);
     l6->SetNextLayer(layer_output); // This line is ugly, to be improved
 
     // 7) save all constructed layers
     __inputLayer = layer_input;
     __outputLayer = layer_output;
-    //__middleAndOutputLayers.push_back(l1); // must be pushed in order
+    __middleAndOutputLayers.push_back(l1); // must be pushed in order
     //__middleAndOutputLayers.push_back(l2); // must be pushed in order
     __middleAndOutputLayers.push_back(l6);
     __middleAndOutputLayers.push_back(layer_output);
     //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
 }
-
+*/
 
 void Network::Train()
 {

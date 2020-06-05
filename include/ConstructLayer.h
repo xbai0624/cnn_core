@@ -137,6 +137,8 @@ public:
     virtual std::vector<Matrix>* GetBiasVector();
     virtual std::vector<Matrix>* GetWeightMatrixOriginal();
     virtual std::vector<Matrix>* GetBiasVectorOriginal();
+    virtual std::vector<Images> &GetWeightGradients();
+    virtual std::vector<Images> &GetBiasGradients();
     virtual LayerType GetType();
     virtual LayerDimension GetLayerDimension();
     virtual float GetDropOutFactor();

@@ -470,7 +470,7 @@ std::ostream& operator<<(std::ostream &os, std::vector<float>& A)
 {
     // overload cout for vector
     for(size_t i=0;i<A.size();i++){
-	os<<std::setfill(' ')<<std::setw(12)<<std::setprecision(6)<<A[i];
+	os<<std::setfill(' ')<<std::setw(16)<<std::setprecision(6)<<A[i];
     }
     std::cout<<std::endl;
     return os;
