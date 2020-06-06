@@ -2219,7 +2219,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	dw = dw^F; // for safe reason, put it here (should have no effect)
 
 	// regularization part
-	double f_regularization = 0;
+	//double f_regularization = 0;
 	if(__regularizationMethod == Regularization::L2)
 	{
 	    // obsolete

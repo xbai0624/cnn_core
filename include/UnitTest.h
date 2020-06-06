@@ -17,6 +17,8 @@ public:
 
     void TestDNN();
     void TestCNN();
+    void TestCNNToPooling();
+    void TestCNNToCNN();
 
 private:
     // reserved
