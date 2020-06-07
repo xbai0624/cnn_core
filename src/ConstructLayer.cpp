@@ -2579,7 +2579,7 @@ void ConstructLayer::LoadTrainedWeightsAndBias()
 
     // save weights and bias
     std::fstream ff(oss.str(), std::ios::in);
-    std::cout<<__func__<<"(): Loading trained weights and bias for layer: "<<layer_id<<" to files."<<std::endl;
+    std::cout<<__func__<<"(): Loading trained weights and bias for layer: "<<layer_id<<" from files."<<std::endl;
 
     if(!ff.is_open())
     {
