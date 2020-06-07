@@ -53,6 +53,15 @@ enum class LayerDimension
     _2D,
     Undefined
 };
+std::ostream & operator<<(std::ostream&, const LayerDimension &);
+
+
+enum class TrainingType
+{
+    NewTraining, // a new training, initialize weights and bias using a Gaussian distribution
+    ResumeTraining,      // resume training or prediction, load weights and bias from txt files
+    Undefined
+};
 
 
 enum class Regularization 
@@ -380,6 +389,7 @@ struct LayerParameterList
     float _gLearningRate;               // for non-input layers
 
     bool _gUseDropout;                  // for middle layers (non-input, non-output)
+    int _gdropoutBranches;               // for middle layers, (set up how many drop-out branch in this layer)
     float _gDropoutFactor;              // for middle layers
 
     Regularization _gRegularization;              // for non-input layers
@@ -387,22 +397,25 @@ struct LayerParameterList
 
     ActuationFuncType _gActuationFuncType;
 
+    TrainingType _gTrainingType;        // for all layers,
+
     // default constructor
     LayerParameterList():
 	_gLayerType(LayerType::Undefined), _gLayerDimension(LayerDimension::Undefined), 
 	_pDataInterface(nullptr), _nNeuronsFC(0), _nKernels(0), _gDimKernel(std::pair<size_t, size_t>(0, 0)),
-	_gLearningRate(0), _gUseDropout(false), _gDropoutFactor(0), _gRegularization(Regularization::Undefined),
-	_gRegularizationParameter(0), _gActuationFuncType(ActuationFuncType::Sigmoid)
+	_gLearningRate(0), _gUseDropout(false), _gdropoutBranches(0), _gDropoutFactor(0), _gRegularization(Regularization::Undefined),
+	_gRegularizationParameter(0), _gActuationFuncType(ActuationFuncType::Sigmoid), _gTrainingType(TrainingType::NewTraining)
     {
     }
 
     LayerParameterList(LayerType layer_type, LayerDimension layer_dimension, DataInterface *data_interface, 
 	    size_t n_neurons, size_t n_kernels, std::pair<size_t, size_t> dimension_kernel, float learning_rate,
-	    bool use_dropout, float dropout_factor, Regularization regu, float regu_parameter, ActuationFuncType neuron_act_f_type):
+	    bool use_dropout, int dropout_branches, float dropout_factor, Regularization regu, float regu_parameter, 
+	    ActuationFuncType neuron_act_f_type, TrainingType training_type):
 	_gLayerType(layer_type), _gLayerDimension(layer_dimension), 
 	_pDataInterface(data_interface), _nNeuronsFC(n_neurons), _nKernels(n_kernels), _gDimKernel(dimension_kernel),
-	_gLearningRate(learning_rate), _gUseDropout(use_dropout), _gDropoutFactor(dropout_factor), _gRegularization(regu),
-	_gRegularizationParameter(regu_parameter), _gActuationFuncType(neuron_act_f_type)
+	_gLearningRate(learning_rate), _gUseDropout(use_dropout), _gdropoutBranches(dropout_branches), _gDropoutFactor(dropout_factor), _gRegularization(regu),
+	_gRegularizationParameter(regu_parameter), _gActuationFuncType(neuron_act_f_type), _gTrainingType(training_type)
     {
     }
 };
@@ -485,6 +498,10 @@ public:
     // assign weights and bias to neurons
     virtual void AssignWeightsAndBiasToNeurons()=0;
 
+    // members
+    virtual void SaveTrainedWeightsAndBias() = 0;
+    virtual void LoadTrainedWeightsAndBias() = 0;
+
     // drop out
     virtual void DropOut()=0;
     virtual void EnableDropOut() = 0;
@@ -511,6 +528,7 @@ public:
     virtual void SetNextLayer(Layer *) = 0; // pass pointer by reference
     virtual void SetCostFuncType(CostFuncType t) = 0;
     virtual void SetDropOutBranches(int) = 0;
+    virtual void SetupDropOutFilterPool() = 0;
 
     // getters
     virtual PoolingMethod & GetPoolingMethod()=0;

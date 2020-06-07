@@ -23,8 +23,11 @@
 class DataInterface
 {
 public:
+    DataInterface(); // default constructor
     DataInterface(LayerDimension ld);
     DataInterface(const char* path1, const char* path2, LayerDimension ld); // for code development
+    // for code development
+    DataInterface(const char* path1, const char* path2, LayerDimension ld, std::pair<int, int> dim, int batch_size); 
     ~DataInterface();
 
     int GetBatchSize(){return gBatchSize;};
@@ -66,6 +69,7 @@ private:
     std::vector<Images> __label_image; // a vector of 2d image labels, used for training
 
     std::pair<size_t, size_t> __dataDimension;
+    std::pair<size_t, size_t> __dataDimensionFromParameter;
 
     //  Load all data to memory
     std::vector<Matrix> test_training_signal; // just for code development, loading all training data into this memory

@@ -58,6 +58,7 @@ public:
     virtual void SetNextLayer(Layer *); // pass pointer by reference
     virtual void SetCostFuncType(CostFuncType t);
     virtual void SetDropOutBranches(int);
+    virtual void SetupDropOutFilterPool();
 
     //
     virtual void ForwardPropagateForSample(int sample_index);
@@ -112,13 +113,19 @@ public:
     // assign weights and bias to neurons
     virtual void AssignWeightsAndBiasToNeurons();
 
+    // members
+    virtual void SaveTrainedWeightsAndBias();
+    virtual void LoadTrainedWeightsAndBias();
+
     // drop out
     virtual void DropOut();
 
     // update active flag FC; heler function for FC;
     void __UpdateActiveFlagFC();
     void __UpdateActiveFlagCNN();
- 
+    void __UpdateActiveFlagFC_Obsolete();
+    void __UpdateActiveFlagCNN_Obsolete();
+
     // update original weights and bias from active weights and bias
     virtual void TransferValueFromActiveToOriginal_WB();
     virtual void TransferValueFromOriginalToActive_WB();
@@ -271,6 +278,7 @@ private:
     // 10): 
     // The dimension of this layer (2D or 1D), currently only input layer need to use this parameter
     LayerDimension __layerDimension = LayerDimension::Undefined;
+    TrainingType __trainingType = TrainingType::NewTraining;
 
     // 11);
     // save accuracy for each batch

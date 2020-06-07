@@ -6,17 +6,28 @@
 std::ostream & operator<<(std::ostream &os, const LayerType &t)
 {
     if(t == LayerType::fullyConnected)
-        os<<"    layer_type=fully connected    ";
+        os<<"____layer_type=fully connected____";
     else if(t == LayerType::cnn)
-        os<<"    layer_type=cnn    ";
+        os<<"____layer_type=cnn____";
     else if(t == LayerType::pooling)
-        os<<"    layer_type=pooling    ";
+        os<<"____layer_type=pooling____";
      else if(t == LayerType::input)
-        os<<"    layer_type=input    ";
+        os<<"____layer_type=input____";
      else if(t == LayerType::output)
-        os<<"    layer_type=output    ";
+        os<<"____layer_type=output____";
      else if(t == LayerType::Undefined)
-        os<<"    layer_type=undefined    ";
+        os<<"____layer_type=undefined____";
+    return os;
+}
+
+std::ostream & operator<<(std::ostream &os, const LayerDimension &dim)
+{
+    if(dim == LayerDimension::_1D)
+        os<<"__LayerDimension=_1D__";
+    else if(dim == LayerDimension::_2D)
+        os<<"__LayerDimension=_2D__";
+    else if(dim == LayerDimension::Undefined)
+        os<<"__LayerDimension=Undefined__";
     return os;
 }
 

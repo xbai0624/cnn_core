@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <numeric> // std::iota
 #include <cassert>
 #include <cmath>
@@ -31,6 +33,7 @@ ConstructLayer::ConstructLayer(LayerParameterList p_list)
     if(p_list._gUseDropout)
     {
         EnableDropOut();
+	__dropOutBranches = p_list._gdropoutBranches;
         SetDropOutFactor(p_list._gDropoutFactor);
     }
     else
@@ -44,6 +47,7 @@ ConstructLayer::ConstructLayer(LayerParameterList p_list)
     __regularizationMethod = p_list._gRegularization;
     __regularizationParameter = p_list._gRegularizationParameter;
     __neuron_actuation_func_type = p_list._gActuationFuncType;
+    __trainingType = p_list._gTrainingType;
 
     // parameters dependent on layer type
     if(__type == LayerType::input)
@@ -121,6 +125,13 @@ void ConstructLayer::Init()
 	InitNeurons();
 	InitWeightsAndBias();
     }
+
+    // setup drop out pool
+    InitFilters();
+    if(__use_drop_out)
+    {
+	SetupDropOutFilterPool();
+    }
 }
 
 void ConstructLayer::EpochInit()
@@ -153,10 +164,15 @@ void ConstructLayer::BatchInit()
     // fc layer drop out changes the dimension of the images
 
     // init drop out filters; reset all filters to true
-    InitFilters();
+    //InitFilters();
 
     if(__use_drop_out)  // drop out
+    {
+        // use different drop-out branches in a rolling sequence
+        __dropOutBranchIndex++;
+	__dropOutBranchIndex = __dropOutBranchIndex%__dropOutBranches;
 	DropOut();
+    }
 
     // only fc layer; cnn layer image won't change
     if(__type == LayerType::fullyConnected || __type == LayerType::output) 
@@ -530,6 +546,12 @@ void  ConstructLayer::InitWeightsAndBias()
     // clear everything
     __weightMatrix.clear();
     __biasVector.clear();
+
+    if(__trainingType == TrainingType::ResumeTraining)
+    {
+        LoadTrainedWeightsAndBias();
+        return;
+    }
 
     if(__p_data_interface == nullptr)
     {
@@ -1388,7 +1410,53 @@ void ConstructLayer::SetDropOutBranches(int total_number_of_drop_out_branches)
     __dropOutBranches = total_number_of_drop_out_branches;
 }
 
+void ConstructLayer::SetupDropOutFilterPool()
+{
+    //std::cout<<"INFO: setting up drop-out filter pools."<<std::endl;
+    if(__activeFlag.size() <= 0)
+    {
+        std::cout<<__func__<<" Error: Filters must be initialized before setting up filter pool."
+	         <<std::endl;
+	exit(0);
+    }
+    assert(__activeFlag[0].Dimension().first > 0);
+    assert(__dropOutBranches >= 1);
+    assert(__dropOut > 0.); // one cannot drop all neurons/matrix_elements
+
+    // 1) generate drop-out pool for each filter
+    std::vector<std::vector<Filter2D>> _p;
+    for(auto &i: __activeFlag)
+    {
+        std::vector<Filter2D> tmp = i.GenerateCompleteDropOutSet(__dropOutBranches, __dropOut);
+	_p.push_back(tmp);
+    }
+
+    // 2) fill accordingly to the drop-out pool
+    for(int drop_id=0;drop_id<__dropOutBranches;drop_id++)
+    {
+        std::vector<Filter2D> tmp;
+	for(auto &i: _p)
+	{
+	    tmp.push_back(i[drop_id]);
+	}
+	__activeFlagPool.push_back(tmp);
+    }
+}
+
 void ConstructLayer::__UpdateActiveFlagFC()
+{
+    assert((int)__activeFlagPool.size() == __dropOutBranches);
+    __activeFlag = __activeFlagPool[__dropOutBranchIndex];
+}
+
+void ConstructLayer::__UpdateActiveFlagCNN()
+{
+    assert((int)__activeFlagPool.size() == __dropOutBranches);
+    __activeFlag = __activeFlagPool[__dropOutBranchIndex];
+}
+
+
+void ConstructLayer::__UpdateActiveFlagFC_Obsolete() // this function has been made obsolete
 {
     // for drop out
     // randomly mask out a few neurons
@@ -1411,7 +1479,7 @@ void ConstructLayer::__UpdateActiveFlagFC()
     }
 }
 
-void ConstructLayer::__UpdateActiveFlagCNN()
+void ConstructLayer::__UpdateActiveFlagCNN_Obsolete() // this function has been made obsolete
 {
     // for drop out
     // randomly mask out a few elements of weight matrix
@@ -2225,7 +2293,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
         // Hadamard F to mask out all inactive elements
 	Matrix F = convertFilterToMatrix(__activeFlag[k]);
 	assert(F.Dimension() == (__weightMatrix[k]).Dimension());
-	dw = dw^F; // for safe reason, put it here (should have no effect)
+	dw = dw^F; // for safe reason, mask out all inactive elements
 
 	// regularization part
 	//double f_regularization = 0;
@@ -2456,6 +2524,141 @@ std::vector<float> & ConstructLayer::GetCostForBatches()
     return __lossForBatches;
 }
 
+void ConstructLayer::SaveTrainedWeightsAndBias()
+{
+    int layer_id = GetID();
+    LayerType layer_type = GetType();
+    LayerDimension layer_dimension = GetLayerDimension();
+
+    // parse file name
+    ostringstream oss;
+    oss<<"weights_and_bias_trained/LayerID=";
+    oss<<layer_id;
+    oss<<layer_type;
+    oss<<layer_dimension;
+    oss<<"_weights_and_bias.txt";
+
+    // save weights and bias
+    std::fstream ff(oss.str(), std::ios::out);
+    std::cout<<__func__<<"(): Saving trained weights and bias from layer: "<<layer_id<<" to files."<<std::endl;
+    if(!ff.is_open())
+    {
+        std::cout<<__func__<<" Error: cannot open file: "<<oss.str()<<" to save weights and bias."
+	         <<std::endl;
+	std::cout<<"           please make sure you have 'weights_and_bias_trained' folder exsit."
+	         <<std::endl;
+	exit(0);
+    }
+    for(size_t i=0;i<__weightMatrix.size();i++)
+    {
+        ff<<"weight "<<i<<":"<<std::endl;
+        //cout<<"weight "<<i<<":"<<std::endl;
+	ff<<__weightMatrix[i]<<std::endl;
+	//cout<<__weightMatrix[i]<<endl;
+	ff<<"bias "<<i<<":"<<std::endl;
+	//cout<<"bias: "<<i<<":"<<std::endl;
+	ff<<__biasVector[i]<<std::endl;
+	//cout<<__biasVector[i]<<endl;
+    }
+    ff.close();
+}
+
+void ConstructLayer::LoadTrainedWeightsAndBias()
+{
+    int layer_id = GetID();
+    LayerType layer_type = GetType();
+    LayerDimension layer_dimension = GetLayerDimension();
+
+    // parse file name
+    ostringstream oss;
+    oss<<"weights_and_bias_trained/LayerID=";
+    oss<<layer_id;
+    oss<<layer_type;
+    oss<<layer_dimension;
+    oss<<"_weights_and_bias.txt";
+
+    // save weights and bias
+    std::fstream ff(oss.str(), std::ios::in);
+    std::cout<<__func__<<"(): Loading trained weights and bias for layer: "<<layer_id<<" to files."<<std::endl;
+
+    if(!ff.is_open())
+    {
+	std::cout<<__func__<<" Error: cannot open file: "<<oss.str()<<" to load weights and bias."
+	    <<std::endl;
+	std::cout<<"           please make sure you have files exsit."
+	    <<std::endl;
+	exit(0);
+    }
+
+    // a helper
+    auto parseLine = [&](std::string line) -> std::vector<float>
+    {
+        std::vector<float> tmp;
+        istringstream iss(line);
+	float v;
+	while(iss>>v)
+	{
+	    tmp.push_back(v);
+	}
+	return tmp;
+    };
+
+    std::string line;
+    std::vector<std::vector<float>> vv;
+    while(getline(ff, line))
+    {
+        std::vector<float> v_line;
+        if(line.find("weight") != std::string::npos)
+	{
+	    if(vv.size() > 0) // last read is bias matrix
+	    {
+	        Matrix M(vv);
+		__biasVector.push_back(M);
+		vv.clear();
+	    }
+	} 
+	else if(line.find("bias") != std::string::npos)
+	{
+	    if(vv.size() > 0) // last read is weight matrix
+	    {
+	        Matrix M(vv);
+		__weightMatrix.push_back(M);
+		vv.clear();
+	    }
+	}
+	else if(line.size() > 0)
+	{
+	    v_line = parseLine(line);
+	    vv.push_back(v_line);
+	}
+    }
+
+    // save last bias matrix
+    if(vv.size() > 0)
+    {
+        Matrix M(vv);
+	__biasVector.push_back(M);
+	vv.clear();
+    }
+
+    assert(__weightMatrix.size() == __biasVector.size());
+    if(__type == LayerType::fullyConnected || __type == LayerType::output)
+    {
+	assert(__weightMatrix.size() == 1);
+	auto dim = __weightMatrix[0].Dimension();
+	//cout<<"fc: load file dim:"<<dim<<endl;
+	//cout<<"fc neurons: "<<__n_neurons_fc<<endl;
+	assert(dim.first == __n_neurons_fc);
+    }
+    if(__type == LayerType::cnn || __type == LayerType::pooling)
+    {
+        assert(__weightMatrix.size() == __n_kernels_cnn);
+	auto dim = __weightMatrix[0].Dimension();
+	//cout<<"cnn: load file dim: "<<dim<<endl;
+	//cout<<"cnn kernel dim: "<<__kernelDim<<endl;
+	assert(dim == __kernelDim);
+    }
+}
 
 void ConstructLayer::Print()
 {

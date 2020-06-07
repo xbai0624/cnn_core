@@ -8,6 +8,11 @@
 
 using namespace std;
 
+DataInterface::DataInterface()
+{
+    // place holder
+}
+
 DataInterface::DataInterface(LayerDimension ld)
 {
     // 1)
@@ -27,6 +32,22 @@ DataInterface::DataInterface(const char* p_signal, const char* p_cosmic, LayerDi
     // for code development
     loadFile(p_signal, test_training_signal);
     loadFile(p_cosmic, test_training_cosmic);
+}
+
+DataInterface::DataInterface(const char* p_signal, const char* p_cosmic, LayerDimension ld, std::pair<int, int> dim, int batch_size)
+{
+    // 1) first need to set layer dimension
+    __gLayerDimension = ld;
+
+    // 2) then load data to memory
+    // for code development
+    loadFile(p_signal, test_training_signal);
+    loadFile(p_cosmic, test_training_cosmic);
+
+    // set data dimension
+    gBatchSize = batch_size;
+    __dataDimensionFromParameter.first = dim.first;
+    __dataDimensionFromParameter.second = dim.second;
 }
 
 
@@ -210,7 +231,15 @@ void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 	}
 	assert(vec.size() == 27);
 
-	Matrix m(10, 10); // 
+	size_t horizontal = 10;
+	size_t vertical = 10;
+	if(__dataDimensionFromParameter.first > 0)
+	{
+	    // if data dimension is set using the constructor parameter, then use it
+	    horizontal = __dataDimensionFromParameter.first;
+	    vertical = __dataDimensionFromParameter.second;
+	}
+	Matrix m(horizontal, vertical); // 
 	for(size_t i=0;i<vec.size();i+=3)
 	{
 	    int ii = vec[i];
