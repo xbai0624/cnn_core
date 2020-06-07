@@ -20,6 +20,8 @@ public:
     void TestCNNToPooling();
     void TestCNNToCNN();
 
+    void TestFilter2D();
+
 private:
     // reserved
 };

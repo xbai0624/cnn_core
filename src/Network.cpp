@@ -29,6 +29,7 @@ void Network::Init()
     __numberOfEpoch = 10;
 }
 
+/*
 void Network::ConstructLayers()
 {
     // Network structure: {Image->Input->CNN->pooling->FC->Output}
@@ -89,8 +90,8 @@ void Network::ConstructLayers()
     //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
 }
+*/
 
-/*
 void Network::ConstructLayers() // test purelly fully connected
 {
     // Network structure: {Image->Input->FC->FC->FC->Output}
@@ -108,7 +109,7 @@ void Network::ConstructLayers() // test purelly fully connected
 
     // 4) middle layer 1 : fc layer ID=6
     LayerParameterList p_list3(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 10, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Sigmoid);
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu);
     Layer *l3 = new ConstructLayer(p_list3);
     l3->SetPrevLayer(layer_input);
     l3->Init();
@@ -137,7 +138,6 @@ void Network::ConstructLayers() // test purelly fully connected
     //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
 }
-*/
 
 /*
 void Network::ConstructLayers() // test fully connected + cnn

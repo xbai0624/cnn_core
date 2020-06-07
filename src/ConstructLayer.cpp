@@ -1379,6 +1379,15 @@ void ConstructLayer::DisableDropOut()
     __use_drop_out = false;
 }
 
+void ConstructLayer::SetDropOutBranches(int total_number_of_drop_out_branches)
+{
+    // when using drop out, set how many drop out branches one wants to have (maximum)
+    // one cannot have inifinite number of drop out branches, otherwise
+    // each drop out branch (w&b) will only get trained once (one batch).
+    // The network will never get trained enough.
+    __dropOutBranches = total_number_of_drop_out_branches;
+}
+
 void ConstructLayer::__UpdateActiveFlagFC()
 {
     // for drop out

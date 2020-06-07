@@ -20,6 +20,7 @@ UnitTest::~UnitTest()
 
 void UnitTest::Test()
 {
+    TestFilter2D();
     //TestImagesStruct();
     //TestMatrix();
 
@@ -28,7 +29,59 @@ void UnitTest::Test()
     //TestCNN();
 
     //TestCNNToPooling();
-    TestCNNToCNN();
+    //TestCNNToCNN();
+}
+
+void UnitTest::TestFilter2D()
+{
+/*
+    Filter2D F(4, 4);
+    cout<<F<<endl;
+
+    Filter2D f = F;
+    cout<<f<<endl;
+
+    // test default assign
+    vector<vector<bool>> b(4, vector<bool>(4, true));
+    vector<vector<bool>> c;
+    c = b;
+
+    for(auto i: c)
+    {
+	for(auto j: i)
+	    cout<<j<<", ";
+	cout<<endl;
+    }
+
+    // test default assignment
+    vector<Filter2D> VF;
+    VF.resize(4, Filter2D(3, 3));
+    vector<Filter2D> VFC;
+    VFC = VF;
+
+    for(auto &i: VFC)
+        cout<<i<<endl;
+
+
+    Filter2D notF = F.Opposite();
+    cout<<"-------------------"<<endl;
+    cout<<F<<endl;
+    cout<<notF<<endl;
+*/
+    cout<<"++++++++++++++++++++++++++++++++++"<<endl;
+    //Filter2D FF(100, 100, true);
+    //vector<Filter2D> complete_set = FF.GenerateCompleteDropOutSet(3, 0.4);
+    //for(auto &i: complete_set) cout<<i<<endl;
+
+    Filter2D FF(100, 100, true);
+    vector<Filter2D> complete_set = FF.GenerateCompleteDropOutSet(20, 0.5);
+    for(auto &i: complete_set) 
+	cout<<i<<endl;
+
+
+    //Filter2D FF(500, 500, true);
+    //vector<Filter2D> complete_set = FF.GenerateCompleteDropOutSet(4, 0.33333);
+    //for(auto &i: complete_set)  cout<<i<<endl;
 }
 
 

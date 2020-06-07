@@ -13,6 +13,7 @@
 #include <cassert>
 //#include <iostream>
 #include "Matrix.h"
+#include "Tools.h"
 
 // actuation function type used in neuron class: a =\sigma(z)
 //     for neuron
@@ -85,6 +86,12 @@ struct Filter2D
         __filter.resize(i, std::vector<bool>(j, true));
     }
 
+    Filter2D(size_t i, size_t j, bool val)
+    {
+        __filter.resize(i, std::vector<bool>(j, val));
+    }
+
+
     std::pair<size_t, size_t> Dimension()
     {
         if(__filter.size() == 0) return std::pair<size_t, size_t>(0, 0);
@@ -94,6 +101,135 @@ struct Filter2D
     std::vector<bool>& operator[](size_t i)
     {
         return __filter[i];
+    }
+
+    Filter2D Opposite()
+    {
+        // generate an opposite filter
+        auto dim = Dimension();
+	Filter2D R(dim.first, dim.second);
+	for(size_t i=0;i<dim.first;i++)
+	    for(size_t j=0;j<dim.second;j++)
+	        R[i][j] = !__filter[i][j];
+	return R;
+    }
+
+    int GetNumberOfTrueElements()
+    {
+        int count = 0;
+        auto dim = Dimension();
+	for(size_t i=0;i<dim.first;i++)
+	    for(size_t j=0;j<dim.second;j++)
+	        if(__filter[i][j]) count++;
+	return count;
+    }
+
+    std::vector<Filter2D> GenerateCompleteDropOutSet(size_t nBatches, float dropoutRatio)
+    {
+        // generate a complete set of drop out filters
+	// In this set, each element get acitvated at least once, this is to make sure during drop-out every neuron get trained
+        // Parameters:
+        //     nBatches: number of drop-out branches
+	//     dropoutRatio: ratio of elements to drop out
+	// 1) basic check
+	auto dim = Dimension();
+        
+	assert(nBatches >= 1);
+	assert(dropoutRatio < 1.0); // one cannot drop all of them
+	int total_elements = (int)dim.first * (int)dim.second;
+	// make sure there's enough positions to accomodate all elements
+	assert(total_elements * (1.0-dropoutRatio) * (int)nBatches >= total_elements);
+	
+	// 2) setup a random engine
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	//std::uniform_int_distribution<> row(0, (int)dim.first-1);
+	//std::uniform_int_distribution<> col(0, (int)dim.second-1);
+
+	// 3) the result to be returned
+	std::vector<Filter2D> Ret;
+	for(size_t n=0;n<nBatches;n++)
+	{
+	    Ret.push_back(Filter2D(dim.first, dim.second, false));
+	}
+
+	// 4) first save all coords
+	std::vector<std::pair<int, int>> all_coords;
+	for(size_t i=0;i<dim.first;i++)
+	{
+	    for(size_t j=0;j<dim.second;j++)
+		all_coords.push_back(std::pair<int, int>((int)i, (int)j));
+	}
+
+	// 5) integer part
+	int average = total_elements / (int)nBatches;
+	for(auto &M: Ret)
+	{
+	    // for each Filter, set 'average' elements to true
+	    int True_elements = 0;
+	    while(True_elements<average && all_coords.size() > 0)
+	    {
+		std::uniform_int_distribution<int> index(0, (int)all_coords.size()-1);
+		int pos = index(gen);
+		M[all_coords[pos].first][all_coords[pos].second] = true;
+		True_elements++;
+		all_coords.erase(all_coords.begin()+pos);
+	    }
+	}
+
+        // 6) residue part
+	int mod = total_elements % (int)nBatches;
+	for(int i=0;i<mod;i++)
+	{
+	    // evenly distribute 'mod' elements to Filters
+	    int True_elements = 0;
+	    while(True_elements < 1 && all_coords.size() > 0)
+	    {
+	        std::uniform_int_distribution<int> index(0, (int)all_coords.size()-1);
+		int pos = index(gen);
+		(Ret[i])[all_coords[pos].first][all_coords[pos].second] = true;
+		True_elements++;
+		all_coords.erase(all_coords.begin()+pos);
+	    }
+	}
+	//assert(1 < 0);
+	
+	// 7) complete the rest elements
+        // a helper
+        // complete missing elements
+	auto complete = [&](size_t required_active_elements, Filter2D& F)
+	{
+	    int actual_active_elements = F.GetNumberOfTrueElements();
+	    int residue = (int)required_active_elements - actual_active_elements;
+	    //assert(residue >= 0); // incorrect
+	    if(residue < 0) return; // correct, in case number of neurons is odd number
+
+	    // first save all inactive coords
+	    std::vector<std::pair<int, int>> tmp;
+	    auto dim = F.Dimension();
+	    for(size_t i=0;i<dim.first;i++)
+	    {
+		for(size_t j=0;j<dim.second;j++)
+		    if(!F[i][j]) tmp.push_back(std::pair<int, int>((int)i, (int)j));
+	    }
+	    int count = 0;
+	    while(count < residue && tmp.size() > 0)
+	    {
+	        std::uniform_int_distribution<int> index(0, (int)tmp.size()-1);
+		int pos = index(gen);
+		if(!F[tmp[pos].first][tmp[pos].second])
+		{
+		    F[tmp[pos].first][tmp[pos].second] = true;
+		    tmp.erase(tmp.begin() + pos);
+		    count++;
+		}
+	    }
+	};
+
+	for(auto &M: Ret)
+	    complete(total_elements*(1.-dropoutRatio), M);
+
+	return Ret;
     }
 };
 std::ostream & operator<<(std::ostream &, const Filter2D &t);
@@ -374,6 +510,7 @@ public:
     virtual void SetPrevLayer(Layer *) = 0; // pass pointer by reference
     virtual void SetNextLayer(Layer *) = 0; // pass pointer by reference
     virtual void SetCostFuncType(CostFuncType t) = 0;
+    virtual void SetDropOutBranches(int) = 0;
 
     // getters
     virtual PoolingMethod & GetPoolingMethod()=0;

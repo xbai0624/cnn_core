@@ -57,6 +57,7 @@ public:
     virtual void SetPrevLayer(Layer *); // pass pointer by reference
     virtual void SetNextLayer(Layer *); // pass pointer by reference
     virtual void SetCostFuncType(CostFuncType t);
+    virtual void SetDropOutBranches(int);
 
     //
     virtual void ForwardPropagateForSample(int sample_index);
@@ -217,6 +218,11 @@ private:
     // 4):
     // this 3D matrix filters out active neurons for FC, active weight matrix element for CNN
     std::vector<Filter2D> __activeFlag;
+    // This pool stores all filters. When drop out is enabled, for each batch, 
+    // program will choose one filter set from this pool, and assign it to __activeFlag;
+    // This is to avoid one uses ifinite number of drop-out branches.
+    // When using drop-out, users don't need to care about this pool, users should only care about __activeFlag.
+    std::vector<std::vector<Filter2D>> __activeFlagPool; 
 
     // 5):
     // neuron images, Images is for sample
@@ -242,6 +248,8 @@ private:
 
     // 7):
     bool __use_drop_out = false;
+    int __dropOutBranches = 2;
+    size_t __dropOutBranchIndex = 0;
     // dropout factor
     float __dropOut = 0.5;
     // stride, for now x-y share the same stride
