@@ -13,7 +13,7 @@ One can also turn on parallel computing for batch level traning and classificati
 The parallel computing is implemented using c++11 thread for now. 
 
 One can use this libary to construct CNN, DNN or mixed neural networks.
-With slight modification, one can also use it to build Auto-encoder Neural Networks.
+One can also use it to build Auto-encoder Neural Networks.
 
 Some techniques used for mitigate overfitting have also been implemented,
 such as Drop-out, L2/L1 regularization.

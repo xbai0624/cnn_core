@@ -30,7 +30,7 @@ std::ostream &operator<<(std::ostream &os, const std::pair<size_t, size_t> &d)
     return os;
 }
 
-#define MULTITHREAD_MATRIX
+//#define MULTITHREAD_MATRIX
 #define NCORES 4
 
 #ifdef MULTITHREAD_MATRIX

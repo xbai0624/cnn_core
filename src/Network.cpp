@@ -152,8 +152,8 @@ void Network::ConstructLayers() // test fully connected + cnn
     DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(10, 10), 500);
 
 
-    TrainingType training_type = TrainingType::NewTraining;
-    //TrainingType training_type = TrainingType::ResumeTraining;
+    //TrainingType training_type = TrainingType::NewTraining;
+    TrainingType training_type = TrainingType::ResumeTraining;
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
@@ -289,6 +289,31 @@ void Network::ForwardPropagateForBatch()
     // get batch size
     int sample_size = __dataInterface->GetBatchSize();
 
+#ifdef MULTI_THREAD
+    auto process_range = [&](int start, int end)
+    {
+        for(int sample_index = start;sample_index<end;sample_index++)
+	{
+	    for(auto &i: __middleAndOutputLayers)
+	    {
+	        i->ForwardPropagateForSample(sample_index);
+	    }
+	}
+    };
+    vector<thread> vth;
+    // dispatch jobs
+    int Range[NTHREAD+1];
+    for(int i=0;i<NTHREAD;i++)
+	Range[i] = sample_size/NTHREAD * i;
+    Range[NTHREAD] = sample_size;
+
+    for(int i=0;i<NTHREAD;i++)
+    {
+        vth.push_back(thread(process_range, Range[i], Range[i+1]));
+    }
+    for(auto &i: vth)
+        i.join();
+#else
     // output and middle layers
     for(int sample_index=0;sample_index<sample_size;sample_index++)
     {
@@ -297,6 +322,7 @@ void Network::ForwardPropagateForBatch()
 	    i->ForwardPropagateForSample(sample_index);
 	}
     }
+#endif
 }
 
 void Network::BackwardPropagateForBatch() 
@@ -307,13 +333,39 @@ void Network::BackwardPropagateForBatch()
     // backward
     int NLayers = __middleAndOutputLayers.size();
 
+#ifdef MULTI_THREAD
+    auto process_range = [&](int start, int end)
+    {
+        for(int sample_index = start;sample_index<end;sample_index++)
+	{
+	    for(int nlayer = NLayers-1;nlayer>=0;nlayer--)
+	    {
+	        __middleAndOutputLayers[nlayer]->BackwardPropagateForSample(sample_index);
+	    }
+	}
+    };
+
+    vector<thread> vth;
+    // dispatch jobs
+    int Range[NTHREAD+1];
+    for(int i=0;i<NTHREAD;i++)
+	Range[i] = sample_size/NTHREAD * i;
+    Range[NTHREAD] = sample_size;
+
+    for(int i=0;i<NTHREAD;i++)
+    {
+        vth.push_back(thread(process_range, Range[i], Range[i+1]));
+    }
+    for(auto &i: vth)
+        i.join();
+#else
     for(int i=0;i<sample_size;i++)
     {
 	// output and middle layers
 	for(int nlayer=NLayers-1; nlayer>=0; nlayer--)
 	    __middleAndOutputLayers[nlayer]->BackwardPropagateForSample(i);
     }
-
+#endif
     /// no need for input layer
 }
 
