@@ -53,6 +53,7 @@ public:
     // members
     std::pair<size_t, size_t> GetDataDimension(){return __dataDimension;};
     void Reset();
+    void Shuffle();
 
     void test();
 
@@ -61,10 +62,10 @@ private:
     int gDataIndex = 0; // indicate which batch
     int gLabelIndex = 0;
 
-    // Get out data in Matrix form
+    // Get out batch data in Matrix form
     std::vector<Matrix> __data; // a vector of 2d image
     std::vector<Matrix> __label; // a vector of 2d image labels, used for training
-    // Get out data in Images form
+    // Get out batch data in Images form
     std::vector<Images> __data_image; // a vector of 2d image
     std::vector<Images> __label_image; // a vector of 2d image labels, used for training
 

@@ -10,6 +10,9 @@
 
 using namespace std;
 
+#define MULTI_THREAD
+#define NTHREAD 4
+
 Network::Network()
 {
     // place holder
@@ -146,10 +149,11 @@ void Network::ConstructLayers() // test fully connected + cnn
     // Network structure: {Image->Input->FC->FC->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
-    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D);
+    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(10, 10), 500);
 
 
-    TrainingType training_type = TrainingType::ResumeTraining;
+    TrainingType training_type = TrainingType::NewTraining;
+    //TrainingType training_type = TrainingType::ResumeTraining;
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
@@ -168,7 +172,7 @@ void Network::ConstructLayers() // test fully connected + cnn
 
     // 4) middle layer 1 : fc layer ID=6
     LayerParameterList p_list6(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 10, 0, 
-	    std::pair<size_t, size_t>(0, 0), 0.1, true, 3, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu, training_type);
+	    std::pair<size_t, size_t>(0, 0), 0.1, false, 3, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu, training_type);
     Layer *l6 = new ConstructLayer(p_list6);
     l6->SetPrevLayer(l1);
     l6->Init();
@@ -232,6 +236,7 @@ void Network::UpdateEpoch()
     numberofBatches = 1; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQqq
 
     __dataInterface->Reset();
+    __dataInterface->Shuffle();
 
     // initializations for epoch
     for(auto &i: __middleAndOutputLayers)

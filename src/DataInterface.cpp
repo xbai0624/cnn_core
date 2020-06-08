@@ -5,6 +5,7 @@
 #include <cassert>
 
 #include "DataInterface.h"
+#include "Tools.h"
 
 using namespace std;
 
@@ -210,6 +211,11 @@ void DataInterface::Reset()
     gLabelIndex = 0;
 }
 
+void DataInterface::Shuffle()
+{
+    TOOLS::Shuffle(test_training_signal);
+    TOOLS::Shuffle(test_training_cosmic);
+}
 
 void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 {

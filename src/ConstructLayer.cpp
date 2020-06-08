@@ -1470,7 +1470,7 @@ void ConstructLayer::__UpdateActiveFlagFC_Obsolete() // this function has been m
     std::vector<bool> tmp(dim.first, true);
     for(int i=0;i<n_dead;i++)
 	tmp[i] = false;
-    Shuffle(tmp);
+    TOOLS::Shuffle(tmp);
 
     // mask out filters
     for(size_t i=0;i<dim.first;i++)
