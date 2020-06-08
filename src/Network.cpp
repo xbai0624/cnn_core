@@ -38,7 +38,7 @@ void Network::ConstructLayers()
     // Network structure: {Image->Input->CNN->pooling->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
-    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D);
+    DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_2D);
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
@@ -101,7 +101,7 @@ void Network::ConstructLayers() // test purelly fully connected
     // Network structure: {Image->Input->FC->FC->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
-    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_1D);
+    DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_1D);
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_1D, data_interface, 0, 0, 
@@ -149,7 +149,7 @@ void Network::ConstructLayers() // test fully connected + cnn
     // Network structure: {Image->Input->FC->FC->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
-    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(10, 10), 500);
+    DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(10, 10), 500);
 
 
     //TrainingType training_type = TrainingType::NewTraining;
