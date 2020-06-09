@@ -915,6 +915,7 @@ float Matrix::MaxInSectionWithPadding(size_t i_start, size_t i_end, size_t j_sta
     auto dim = Dimension();
     bool at_least_one_element_in_range = false;
 
+    assert(dim.first > 0 && dim.second > 0);
     assert((int)i_start >= 0 && i_end > i_start);
     assert((int)j_start >= 0 && j_end > j_start);
 
@@ -943,7 +944,7 @@ float Matrix::MaxInSectionWithPadding(size_t i_start, size_t i_end, size_t j_sta
     }
     if(!at_least_one_element_in_range)
     {
-	std::cout<<"Error: Max in matrix section: all elements exceeded range."<<std::endl;
+	std::cout<<__func__<<"() Error: all elements exceeded range."<<std::endl;
 	exit(0);
     }
 

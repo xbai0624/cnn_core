@@ -307,7 +307,9 @@ void Neuron::UpdateZPooling(int sample_index)
     //Images image = inputImage.back(); // images for current training sample
     Images & image = inputImage[sample_index]; // images for current training sample
     std::vector<Matrix> & images = image.OutputImageFromKernel;
+    //for(auto &i: images)cout<<i<<endl;
     Matrix & kernel_image = images[__coord.k];
+    //std::cout<<kernel_image<<std::endl;
 
     auto dim = __w->Dimension();
     size_t i_size = dim.first, j_size = dim.second;

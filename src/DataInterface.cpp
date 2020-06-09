@@ -40,15 +40,17 @@ DataInterface::DataInterface(const char* p_signal, const char* p_cosmic, LayerDi
     // 1) first need to set layer dimension
     __gLayerDimension = ld;
 
+    // set data dimension
+    gBatchSize = batch_size;
+    __dataDimensionFromParameter.first = dim.first;
+    __dataDimensionFromParameter.second = dim.second;
+
     // 2) then load data to memory
     // for code development
     loadFile(p_signal, test_training_signal);
     loadFile(p_cosmic, test_training_cosmic);
 
-    // set data dimension
-    gBatchSize = batch_size;
-    __dataDimensionFromParameter.first = dim.first;
-    __dataDimensionFromParameter.second = dim.second;
+    //cout<<"data dimension from parameter: "<<__dataDimensionFromParameter<<endl;
 }
 
 
