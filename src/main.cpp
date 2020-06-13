@@ -13,6 +13,8 @@ int main(int argc, char* argv[])
     net_work->Init();
 
     net_work->Train();
+    //net_work->Classify();
+
 
     // test
     //UnitTest *test = new UnitTest();

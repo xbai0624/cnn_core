@@ -223,6 +223,12 @@ void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 {
     // this only for code development, it reads data in ./test_data/ directory
     fstream f(path, fstream::in);
+    if(!f.is_open()) 
+    {
+        std::cout<<__func__<<" Error: Cannot open file: "<<path<<std::endl;
+	exit(0);
+    }
+
     string line;
     while(getline(f, line))
     {

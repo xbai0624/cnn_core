@@ -26,7 +26,7 @@ public:
 
     // inits
     void Init();
-    void ConstructLayers();
+    void ConstructLayers(TrainingType);
 
     // training procedures
     void Train();
