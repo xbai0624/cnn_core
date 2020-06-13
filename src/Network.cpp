@@ -37,8 +37,8 @@ void Network::ConstructLayers(TrainingType training_type)
     // Network structure: {Image->Input->CNN->pooling->CNN->pooling->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
-    //DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(100, 100), 500);
-    DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(100, 100), 500);
+    DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(100, 100), 500);
+    //DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(100, 100), 500);
 
     TrainingType resume_or_new_training = training_type;
 
