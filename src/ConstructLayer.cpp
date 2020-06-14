@@ -595,7 +595,7 @@ void  ConstructLayer::InitWeightsAndBias()
 	for(size_t i=0;i<__n_kernels_cnn;i++)
 	{
 	    Matrix w(__kernelDim);
-	    w.RandomGaus(0., 1./sqrt(total_entries));
+	    w.RandomGaus(0., 1./sqrt((float)total_entries));
 	    __weightMatrix.push_back(w);
 
 	    Matrix b(1, 1);

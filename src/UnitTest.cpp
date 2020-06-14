@@ -20,9 +20,9 @@ UnitTest::~UnitTest()
 
 void UnitTest::Test()
 {
-    TestFilter2D();
+    //TestFilter2D();
     //TestImagesStruct();
-    //TestMatrix();
+    TestMatrix();
 
     //TestDNN();
 
@@ -128,6 +128,7 @@ void UnitTest::TestImagesStruct()
 
 void UnitTest::TestMatrix()
 {
+/*
     Matrix m(4, 4);
     m.Random();
 
@@ -149,6 +150,14 @@ void UnitTest::TestMatrix()
     cout<<m1<<endl;
     cout<<m2<<endl;
     cout<<"matrix equal: "<<e<<endl;
+*/
+
+    Matrix m(4, 10);
+    for(int i=0;i<10;i++)
+    {
+	m.RandomGaus(0, 1./100);
+	cout<<m<<endl;
+    }
 }
 
 void UnitTest::TestDNN()

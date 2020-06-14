@@ -37,7 +37,7 @@ void Network::ConstructLayers(TrainingType training_type)
     // Network structure: {Image->Input->CNN->pooling->CNN->pooling->FC->Output}
 
     // 1) Data interface, this is a tool class, for data prepare
-    DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(100, 100), 500);
+    DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(50, 50), 500);
     //DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(100, 100), 500);
 
     TrainingType resume_or_new_training = training_type;
@@ -53,7 +53,7 @@ void Network::ConstructLayers(TrainingType training_type)
 
     // 4) middle layer 3 : cnn layer ID=1
     LayerParameterList p_list1(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(9, 9), 0.1, false, 0, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu, resume_or_new_training);
+	    std::pair<size_t, size_t>(3, 3), 0.1, false, 0, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu, resume_or_new_training);
     Layer *l1 = new ConstructLayer(p_list1);
     l1->SetPrevLayer(layer_input);
     l1->Init();
@@ -67,7 +67,7 @@ void Network::ConstructLayers(TrainingType training_type)
  
     // 4) middle layer 3 : cnn layer ID=3
     LayerParameterList p_list3(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 3, 
-	    std::pair<size_t, size_t>(5, 5), 0.1, false, 0, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu, resume_or_new_training);
+	    std::pair<size_t, size_t>(3, 3), 0.1, false, 0, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu, resume_or_new_training);
     Layer *l3 = new ConstructLayer(p_list3);
     l3->SetPrevLayer(l2);
     l3->Init();
@@ -80,7 +80,7 @@ void Network::ConstructLayers(TrainingType training_type)
     l4->Init();
 
     // 4) middle layer 1 : fc layer ID=5
-    LayerParameterList p_list5(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 9, 0, 
+    LayerParameterList p_list5(LayerType::fullyConnected, LayerDimension::_1D, data_interface, 5, 0, 
 	    std::pair<size_t, size_t>(0, 0), 0.1, false, 0, 0.5, Regularization::L2, 0.1, ActuationFuncType::Relu, resume_or_new_training);
     Layer *l5 = new ConstructLayer(p_list5);
     l5->SetPrevLayer(l4);
@@ -227,7 +227,7 @@ void Network::ConstructLayers() // test fully connected + cnn
 void Network::Train()
 {
     // construct layers
-    TrainingType training_type = TrainingType::ResumeTraining;
+    TrainingType training_type = TrainingType::NewTraining;
     ConstructLayers(training_type);
 
     __numberOfEpoch = 50; // test QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
