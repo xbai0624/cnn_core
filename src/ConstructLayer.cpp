@@ -541,6 +541,7 @@ void ConstructLayer::InitFilters()
 
 void  ConstructLayer::InitWeightsAndBias()
 {
+    //std::cout<<"Layer id: "<<GetID()<<", W initialization."<<endl;
     // init weights and bias
     // no need to init active w&b, they will be filled in Batch starting phase
     // clear everything
@@ -581,12 +582,39 @@ void  ConstructLayer::InitWeightsAndBias()
 	else 
 	    n_prev = __prevLayer->GetNumberOfNeurons();
 
+        // weight initialization
 	Matrix w(n_curr, n_prev);
-	w.RandomGaus(0., 1./sqrt((float)total_entries)); // (0, sqrt(n_neuron)) normal distribution
+	if(GetNeuronActuationFuncType() != ActuationFuncType::Relu)
+	{
+	    // for non-ReLu actuation functions, use Xavier initialization
+	    // random with a normal distribution with sigma = 1/sqrt(number of fan-in neurons)
+	    w.RandomGaus(0., 1./sqrt((float)n_prev)); // (0, sqrt(n_neuron)) normal distribution
+
+	    //w.RandomGaus(0., 1./sqrt((float)total_entries)); // (0, sqrt(n_neuron)) normal distribution
+	}
+	else
+	{
+	    // for ReLu actuation functions, use Kaiming He method: https://arxiv.org/pdf/1502.01852.pdf
+	    // step 1): initialize the matrix with a standard normal distribution
+	    w.RandomGaus(0., 1.);
+	    // step 2): then hadamard the weight matrix with a number sqrt(2/n)
+	    //          where n is the fan-in neurons (number of neurons in previous layer)
+	    w = w*sqrt(2./(float)n_prev);
+	}
 	__weightMatrix.push_back(w);
 
+        // bias initialization
 	Matrix b(n_curr, 1);
-	b.RandomGaus(0., 1.); // (0, 1) normal distribution
+	if(GetNeuronActuationFuncType() != ActuationFuncType::Relu)
+	{
+	    // for non-ReLu neurons, use Xavier initialization
+	    b.RandomGaus(0., 1.); // (0, 1) normal distribution
+	}
+	else
+	{
+	    // for ReLu neurons, use Kaiming He method, initialize bias to 0
+            b = b*0.;
+	}
 	__biasVector.push_back(b);
     }
     else if(__type == LayerType::cnn)
@@ -595,11 +623,35 @@ void  ConstructLayer::InitWeightsAndBias()
 	for(size_t i=0;i<__n_kernels_cnn;i++)
 	{
 	    Matrix w(__kernelDim);
-	    w.RandomGaus(0., 1./sqrt((float)total_entries));
+	    // weight matrix initialization
+	    if(GetNeuronActuationFuncType() != ActuationFuncType::Relu)
+	    {
+	        // for non-ReLu neurons, use Xavier initialization
+		int fan_in_neurons = __prevLayer->GetNumberOfNeurons();
+		w.RandomGaus(0., 1./sqrt((float)fan_in_neurons));
+		//w.RandomGaus(0., 1./sqrt((float)total_entries));
+	    }
+	    else
+	    {
+	        // for ReLu neurons, use Kaiming He method
+		w.RandomGaus(0., 1.);
+		int fan_in_neurons = __prevLayer->GetNumberOfNeurons();
+		w = w * sqrt(2./ (float) fan_in_neurons);
+	    }
 	    __weightMatrix.push_back(w);
 
 	    Matrix b(1, 1);
-	    b.RandomGaus(0., 1.); // (0, 1) normal distribution
+	    // bias matrix initialization
+	    if(GetNeuronActuationFuncType() != ActuationFuncType::Relu)
+	    {
+	        // for non-ReLu neurons, use Xavier initialization
+		b.RandomGaus(0., 1.); // (0, 1) normal distribution
+	    }
+	    else 
+	    {
+	        // for ReLu neurons, use Kaiming He method, set bias to 0.
+	        b = b * 0.;
+	    }
 	    __biasVector.push_back(b);
 	}
     }
@@ -1846,6 +1898,11 @@ CostFuncType ConstructLayer::GetCostFuncType()
 	exit(0);
     }
     return __cost_func_type;
+}
+
+ActuationFuncType ConstructLayer::GetNeuronActuationFuncType()
+{
+    return __neuron_actuation_func_type;
 }
 
 DataInterface * ConstructLayer::GetDataInterface()

@@ -161,6 +161,7 @@ public:
     virtual std::pair<size_t, size_t> GetKernelDimensionCNN();
     virtual int GetBatchSize();
     virtual CostFuncType GetCostFuncType();
+    virtual ActuationFuncType GetNeuronActuationFuncType();
     virtual DataInterface * GetDataInterface();
     virtual Layer* GetNextLayer();
     virtual Layer* GetPrevLayer();

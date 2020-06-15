@@ -551,6 +551,7 @@ public:
     virtual int GetID(){return __layerID;};
     virtual int GetBatchSize() = 0;
     virtual CostFuncType GetCostFuncType() = 0;
+    virtual ActuationFuncType GetNeuronActuationFuncType() = 0;
     virtual DataInterface * GetDataInterface() = 0;
     virtual Layer* GetNextLayer() = 0;
     virtual Layer* GetPrevLayer() = 0;

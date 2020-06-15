@@ -6,7 +6,7 @@
 std::ostream & operator<<(std::ostream &os, const LayerType &t)
 {
     if(t == LayerType::fullyConnected)
-        os<<"____layer_type=fully connected____";
+        os<<"____layer_type=fully_connected____";
     else if(t == LayerType::cnn)
         os<<"____layer_type=cnn____";
     else if(t == LayerType::pooling)

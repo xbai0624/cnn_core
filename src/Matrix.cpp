@@ -493,6 +493,23 @@ void Matrix::Random()
     //std::cout<<"Fill finished."<<std::endl;
 }
 
+void Matrix::Random(float min, float max)
+{
+    // fill with random numbers
+    // uniform (0,1) distribution
+    //std::cout<<"Filling matrix using flat (0, 1) distribution"<<std::endl;
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(min, max);
+
+    for(size_t i=0;i<__M.size();i++){
+	for(size_t j=0;j<__M[0].size();j++){
+	    __M[i][j] = dist(mt);
+	}
+    }
+    //std::cout<<"Fill finished."<<std::endl;
+}
+
 void Matrix::RandomGaus(float mu, float sigma)
 {
     // fill with random numbers

@@ -115,6 +115,7 @@ public:
 
     // fill matrix with random numbers
     void Random();
+    void Random(float min, float max);
     void RandomGaus(float mu, float sigma);
     std::pair<size_t, size_t> Dimension() const;
 
