@@ -92,12 +92,15 @@ public:
     Matrix Transpose();
     // rotate
     Matrix Rot_180();
+    // normalization
+    Matrix Normalization();
     // get a section of matrix [i, j) [m, n): (front close, back open)
     Matrix GetSection(size_t, size_t, size_t, size_t, bool padding=false, float padding_value=0);
     // sum all elements
     float ElementSum();
     // max element in section
     float MaxInSection(size_t, size_t, size_t, size_t);
+    float MinInSection(size_t, size_t, size_t, size_t);
     float MaxInSection(size_t, size_t, size_t, size_t, std::pair<size_t, size_t> &coord);
     float MaxInSectionWithPadding(size_t, size_t, size_t, size_t, float padding_value = -9.e10);
     // average in section

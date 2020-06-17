@@ -71,6 +71,13 @@ enum class Regularization
     Undefined
 };
 
+enum class WeightsOptimizer
+{
+    SGD,
+    Adam,
+    Undefined
+};
+
 enum class CostFuncType
 {
     cross_entropy,  // sigmoid

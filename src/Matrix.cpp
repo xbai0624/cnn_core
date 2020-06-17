@@ -608,6 +608,24 @@ Matrix Matrix::Reshape(size_t m, size_t n) const
     return res;
 }
 
+Matrix Matrix::Normalization()
+{
+    auto dim = Dimension();
+    Matrix m(dim);
+
+    float min = MinInSection(0, dim.first, 0, dim.second);
+    float max = MaxInSection(0, dim.first, 0, dim.second);
+
+    float amp = max - min;
+    assert(amp > 0);
+
+    for(size_t i=0;i<dim.first;i++)
+        for(size_t j=0;j<dim.second;j++)
+	    m[i][j] = (*this)[i][j] / amp;
+
+    return m;
+}
+
 Matrix Matrix::Transpose()
 {
     // transpose current matrix
@@ -873,6 +891,26 @@ Matrix Matrix::ConcatenateMatrixByJ(std::vector<Matrix> &A)
     // to be implemented
 
     return C;
+}
+
+float Matrix::MinInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+{
+    // find max element in section [i_start, i_end), and [j_start, j_end)
+    // in this code, we all follow the rule: close front and open end
+    // and all counters start from 0
+    auto dim = Dimension();
+    if((int)i_start < 0 || (int)j_start < 0 || i_end <= i_start || j_end <= j_start || i_end > dim.first || j_end > dim.second){
+	std::cout<<"Error: Min in matrix section: exceeded range."<<std::endl;
+	exit(0);
+    }
+    float res = __M[i_start][j_start];
+    for(size_t i=i_start;i<i_end;i++){
+	for(size_t j=j_start;j<j_end;j++){
+	    if(res > __M[i][j])
+		res = __M[i][j];
+	}
+    }
+    return res;
 }
 
 

@@ -250,20 +250,23 @@ void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 	if(__dataDimensionFromParameter.first > 0)
 	{
 	    // if data dimension is set using the constructor parameter, then use it
-	    horizontal = __dataDimensionFromParameter.first;
-	    vertical = __dataDimensionFromParameter.second;
+	    horizontal = sqrt((int)__dataDimensionFromParameter.first * (int)__dataDimensionFromParameter.second);
+	    vertical = horizontal;
 	}
 	Matrix m(horizontal, vertical); // 
 	for(size_t i=0;i<vec.size();i+=3)
 	{
-	    int ii = vec[i];
-	    int jj = vec[i+1];
+	    size_t ii = vec[i];
+	    size_t jj = vec[i+1];
+	    assert(ii<horizontal && jj < vertical);
 	    float val = vec[i+2];
 
 	    m[ii][jj] = val;
 	}
 
-	contents.push_back(m);
+        Matrix _mm = m.Reshape(__dataDimensionFromParameter.first, __dataDimensionFromParameter.second);
+        Matrix mm = _mm.Normalization();
+	contents.push_back(mm);
     }
 
     // *** implement the image dimension

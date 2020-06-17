@@ -22,11 +22,12 @@ void UnitTest::Test()
 {
     //TestFilter2D();
     //TestImagesStruct();
-    TestMatrix();
+    //TestMatrix();
 
     //TestDNN();
 
     //TestCNN();
+    TestCNNWeightAndBiasEvolution();
 
     //TestCNNToPooling();
     //TestCNNToCNN();
@@ -994,6 +995,92 @@ void UnitTest::TestCNNToCNN()
 }
 
 
+
+
+void UnitTest::TestCNNWeightAndBiasEvolution()
+{
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(10, 10), 200);
+
+    TrainingType resume_or_new_training = TrainingType::NewTraining;
+    float learning_rate = 0.06;
+    float regularization_factor = 0.01;
+
+    // 3) input layer   ID=0
+    LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
+	    std::pair<size_t, size_t>(0, 0), learning_rate, false, 0, 0, Regularization::Undefined, 0, ActuationFuncType::Undefined, resume_or_new_training);
+    Layer* layer_input = new ConstructLayer(p_list0);
+    layer_input->Init();
+
+    // 4) middle layer 3 : cnn layer ID=1
+    LayerParameterList p_list1(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 1, 
+	    std::pair<size_t, size_t>(4, 4), learning_rate, false, 0, 0.5, Regularization::L2, regularization_factor, ActuationFuncType::Relu, resume_or_new_training);
+    Layer *l1 = new ConstructLayer(p_list1);
+    l1->SetPrevLayer(layer_input);
+    l1->Init();
+
+    // 4) middle layer 3 : cnn layer ID=3
+    LayerParameterList p_list3(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 1, 
+	    std::pair<size_t, size_t>(4, 4), learning_rate, false, 0, 0.5, Regularization::L2, regularization_factor, ActuationFuncType::Relu, resume_or_new_training);
+    Layer *l3 = new ConstructLayer(p_list3);
+    l3->SetPrevLayer(l1);
+    l3->Init();
+
+    // 5) output layer ID = 6
+    LayerParameterList p_list6(LayerType::output, LayerDimension::_1D, data_interface, 2, 0, 
+	    std::pair<size_t, size_t>(0, 0), learning_rate, false, 0, 0., Regularization::L2, regularization_factor, ActuationFuncType::SoftMax, resume_or_new_training);
+    Layer* layer_output = new ConstructLayer(p_list6);
+    layer_output -> SetPrevLayer(l3);
+    layer_output -> Init();
+
+    l1->SetNextLayer(l3);
+    l3->SetNextLayer(layer_output); // This line is ugly, to be improved
+
+    cout<<"ooooooooo000000000oooooooooo000000000ooooooooooo00000000oooooooooo0000000000000ooooooooooooo"<<endl;
+    int numEpoch = 50;
+    for(int e=0;e<numEpoch;e++)
+    {
+        cout<<"...............Epoch: "<<e<<endl;
+        data_interface -> Reset();
+	data_interface -> Shuffle();
+
+	int nBatch = 1;
+	for(int i = 0; i< nBatch;i++)
+	{
+	    l1 -> BatchInit();
+	    l3 -> BatchInit();
+	    layer_output -> BatchInit();
+
+	    data_interface -> GetNewBatchData();
+	    data_interface -> GetNewBatchLabel();
+
+	    layer_input -> FillBatchDataToInputLayerA();
+
+	    int nSample = data_interface -> GetBatchSize();
+
+	    // forward propagation
+	    for(int sample_index = 0; sample_index < nSample;sample_index++)
+	    {
+	        l1 -> ForwardPropagateForSample(sample_index);
+	        l3 -> ForwardPropagateForSample(sample_index);
+	        layer_output -> ForwardPropagateForSample(sample_index);
+	    }
+
+	    // backward propagation
+	    for(int sample_index = 0; sample_index < nSample;sample_index++)
+	    {
+		layer_output -> BackwardPropagateForSample(sample_index);
+		l3 -> BackwardPropagateForSample(sample_index);
+		l1 -> BackwardPropagateForSample(sample_index);
+	    }
+
+	    // update weights and bias
+	    l1->UpdateWeightsAndBias();
+	    l3->UpdateWeightsAndBias();
+	    layer_output->UpdateWeightsAndBias();
+	}
+    }
+}
 
 
 

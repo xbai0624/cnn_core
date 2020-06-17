@@ -17,6 +17,7 @@ public:
 
     void TestDNN();
     void TestCNN();
+    void TestCNNWeightAndBiasEvolution();
     void TestCNNToPooling();
     void TestCNNToCNN();
 

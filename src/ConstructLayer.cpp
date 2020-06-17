@@ -560,13 +560,13 @@ void  ConstructLayer::InitWeightsAndBias()
 	         <<std::endl;
         exit(0);
     }
-    int batch_size = __p_data_interface->GetBatchSize();
-    int N = __p_data_interface->GetNumberOfBatches();
+    //int batch_size = __p_data_interface->GetBatchSize();
+    //int N = __p_data_interface->GetNumberOfBatches();
 
     // total_entries is used to randomly initialize weight matrix, 
     // using a Gaussian distribution, wieth mean=0, sigma = 1/sqrt(total_entries)
-    float total_entries = (float)batch_size * (float)N; // use this one, it is better
-    //float total_entries = (float)batch_size;          // this one is not as good as the above one
+    //float total_entries = (float)batch_size * (float)N; // use this one, it is better (incorrect)
+    //float total_entries = (float)batch_size;          // this one is not as good as the above one (incorrect)
 
     if(__type == LayerType::fullyConnected || __type == LayerType::output) // output layer is also a fully connected layer
     {
@@ -597,6 +597,7 @@ void  ConstructLayer::InitWeightsAndBias()
 	    // for ReLu actuation functions, use Kaiming He method: https://arxiv.org/pdf/1502.01852.pdf
 	    // step 1): initialize the matrix with a standard normal distribution
 	    w.RandomGaus(0., 1.);
+
 	    // step 2): then hadamard the weight matrix with a number sqrt(2/n)
 	    //          where n is the fan-in neurons (number of neurons in previous layer)
 	    w = w*sqrt(2./(float)n_prev);
@@ -607,8 +608,9 @@ void  ConstructLayer::InitWeightsAndBias()
 	Matrix b(n_curr, 1);
 	if(GetNeuronActuationFuncType() != ActuationFuncType::Relu)
 	{
-	    // for non-ReLu neurons, use Xavier initialization
-	    b.RandomGaus(0., 1.); // (0, 1) normal distribution
+	    // for non-ReLu neurons, use Xavier initialization, initialize it to 0
+	    b = b * 0.;
+	    //b.RandomGaus(0., 1.); // (0, 1) normal distribution
 	}
 	else
 	{
@@ -645,7 +647,9 @@ void  ConstructLayer::InitWeightsAndBias()
 	    if(GetNeuronActuationFuncType() != ActuationFuncType::Relu)
 	    {
 	        // for non-ReLu neurons, use Xavier initialization
-		b.RandomGaus(0., 1.); // (0, 1) normal distribution
+		// Xavier also require b to be initialized with 0
+		b = b * 0.;
+		//b.RandomGaus(0., 1.); // (0, 1) normal distribution
 	    }
 	    else 
 	    {
@@ -847,6 +851,8 @@ void ConstructLayer::ComputeCostInOutputLayerForCurrentSample(int sample_index)
     // push cost for current sample to memory
     //__outputLayerCost.push_back(cost);
     __outputLayerCost[sample_index]= cost;
+    //cout<<"sample cost: "<<cost<<endl;
+    //getchar();
 
 
     // --- 3) then calculate delta: delta = delta(a_i, y_i) for this sample
@@ -2134,7 +2140,28 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
 	//cout<<i<<" before sum"<<endl;
 	//getchar();
     }
-    dw = dw * float(__learningRate/(double)M); // over batch 
+
+    if(__weights_optimizer == WeightsOptimizer::SGD)
+    {
+        // standard SGD 
+	dw = dw * float(__learningRate/(double)M); // over batch 
+    }
+    else if(__weights_optimizer == WeightsOptimizer::Adam)
+    {
+        // Adam optimizer
+	dw = dw * (1./ (double)M );
+
+	//Matrix tmp = dw * __learningRate;
+	//cout<<"Before adam: "<<tmp<<endl;
+        dw = AdamOptimizer(dw, 0);
+	//cout<<"after adam: "<<dw<<endl;
+	//getchar();
+    }
+    else
+    {
+        std::cout<<__func__<<" Error: unsupported optimization method."<<std::endl;
+	exit(0);
+    }
     //cout<<"learning rate: "<<float(__learningRate/(double)M)<<endl;
 
     // Get filter Matrix for masking Regularization item
@@ -2157,7 +2184,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     Matrix prevLayerFilter(1, dw.Dimension().second, 1);
     //cout<<"before: "<<endl<<prevLayerFilter<<endl;
 
-    if(__prevLayer->GetType() == LayerType::input) // only fc layer, other layers won't affect
+    if(__prevLayer->GetType() == LayerType::input) // only fc layer need this, other layers won't affect
     {
 	auto prevLayerFilters = __prevLayer->GetActiveFlag();
 	assert(prevLayerFilters.size() == 1);
@@ -2311,7 +2338,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
     // any neuron would be fine, instead you need to loop over images. --- This is old design
 
     // after finishing one batch, update weights and bias, CNN layer
-    size_t M = __imageDelta.size(); // batch size
+    size_t M = __imageDeltaFull.size(); // batch size
     if( M != __wGradient.size() ) {
 	std::cout<<"Error: update FC weights, batch size not match."<<std::endl;
 	exit(0);
@@ -2345,7 +2372,22 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	for(size_t i=0;i<M;i++){ 
 	    dw  = dw + __wGradient[i].OutputImageFromKernel[k];
 	}
-	dw = dw * float(__learningRate/(double)M); // gradients average over batch size
+	if(__weights_optimizer == WeightsOptimizer::SGD)
+	{
+	    // stochastic gradient descent
+	    dw = dw * float(__learningRate/(double)M); // gradients average over batch size
+	}
+	else if(__weights_optimizer == WeightsOptimizer::Adam)
+	{
+	    // adam optimize
+	    dw = dw * (1./(double)M);
+	    dw = AdamOptimizer(dw, k);
+	}
+	else
+	{
+	    std::cout<<__func__<<" Error: unsupported weights optimizer."<<std::endl;
+	    exit(0);
+	}
 
         // Hadamard F to mask out all inactive elements
 	Matrix F = convertFilterToMatrix(__activeFlag[k]);
@@ -2405,6 +2447,96 @@ void ConstructLayer::UpdateWeightsAndBiasPooling()
     // pooling layer weight elements always equal to 1, bias always equal to 0
     // no need to update
     return; 
+}
+
+static float __AdamSquareRoot(float v)
+{
+    return sqrt(v);
+}
+
+Matrix ConstructLayer::AdamOptimizer(const Matrix &dw, int kernel_index)
+{
+    //cout<<"----------------------------------------------------------"<<endl;
+    // Adam optimizer, refer to: https://arxiv.org/abs/1412.6980
+    // sanity check
+    assert(Momentum_1st_order.size() == Momentum_2nd_order.size());
+    if(Momentum_1st_order.size() == 0)
+    {
+        // initiaize with 0's
+	if(__type == LayerType::fullyConnected || __type == LayerType::output || __type == LayerType::input)
+	{
+	    assert(kernel_index == 0);
+	    Momentum_1st_order.resize(1, Matrix(dw.Dimension(), 0));
+	    Momentum_2nd_order.resize(1, Matrix(dw.Dimension(), 0));
+	}
+	else if(__type == LayerType::cnn || __type == LayerType::pooling)
+	{
+	    assert(__n_kernels_cnn > 0);
+	    Momentum_1st_order.resize(__n_kernels_cnn, Matrix(dw.Dimension(), 0));
+	    Momentum_2nd_order.resize(__n_kernels_cnn, Matrix(dw.Dimension(), 0));
+	}
+    }
+
+    // g_t
+    Matrix g_t = dw;
+    //cout<<"g_t: "<<endl<<g_t<<endl;
+
+    // these parameters are from paper: https://arxiv.org/abs/1412.6980
+    //     according to the ref: learning rate is best to be 0.001
+    double beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8;
+    // get m_t
+    Matrix m_t_1 = Momentum_1st_order[kernel_index];
+    //cout<<"m_t_1: "<<endl<<m_t_1<<endl;
+    //cout<<" 1 - beta1: "<<1.-beta1<<endl;
+    Matrix m_tmp = g_t * (1. - beta1);
+    //cout<<"m_tmp: "<<endl<<m_tmp<<endl;
+    Matrix m_t = (m_t_1 * beta1) + m_tmp;
+    //Matrix debug_tmp = m_t_1 * beta1;
+    //cout<<"m_t_1*beta1: "<<endl<<(debug_tmp)<<endl;
+    //cout<<"m_t: = (m_t_1 * beta1) + g_t * (1 - beta1): "<<endl<<m_t<<endl;
+    // save m_t
+    Momentum_1st_order[kernel_index] = m_t; // update 1st order momentum
+    // get v_t
+    Matrix v_t_1 = Momentum_2nd_order[kernel_index];
+    //cout<<"v_t_1: "<<endl<<v_t_1<<endl;
+    m_tmp = (g_t^g_t) * (1. - beta2);
+    //cout<<"g_t^2 * (1. - beta2(0.999))"<<endl<<m_tmp<<endl;
+    Matrix v_t = (v_t_1 *beta2) + m_tmp;
+    //debug_tmp = v_t_1 *beta2;
+    //cout<<"v_t_1 * beta2:"<<endl<<debug_tmp<<endl;
+    //cout<<"vt = v_t_1*beta2 + g_t^2*(1-beta2): "<<endl<<v_t<<endl;
+    // save v_t
+    Momentum_2nd_order[kernel_index] = v_t; // update 2nd order momentum
+
+    // get bias corrected m_t and v-t
+    __beta1_to_power_t *= beta1;
+    __beta2_to_power_t *= beta2;
+    Matrix bias_corrected_1st_order_moment = m_t / (1. - __beta1_to_power_t);
+    //cout<<"bias corrected m_t: /"<<(1. - __beta1_to_power_t)<<endl<<bias_corrected_1st_order_moment<<endl;
+    Matrix bias_corrected_2nd_order_moment = v_t / (1. - __beta2_to_power_t);
+    //cout<<"bias corrected v_t: /"<<(1. - __beta2_to_power_t)<<endl<<bias_corrected_2nd_order_moment<<endl;
+
+    // get d_theta_t 
+    Matrix m_epsilon(g_t.Dimension(), epsilon);
+    bias_corrected_2nd_order_moment(__AdamSquareRoot);
+    //cout<<"sqrt(^v_t): "<<endl<<bias_corrected_2nd_order_moment<<endl;
+    Matrix square_root_of_vt = bias_corrected_2nd_order_moment;
+    Matrix denominator = square_root_of_vt + m_epsilon;
+    //cout<<"m_epsilon: "<<endl<<m_epsilon<<endl;
+    //cout<<"sqrt(^v_t): + epsilon"<<endl<<denominator<<endl;
+    Matrix ratio = bias_corrected_1st_order_moment / denominator;
+    //cout<<"^m_t/(sqrt(^v_t) + epsilon):"<<endl<<ratio<<endl;
+
+    // according to the reference, alpha best to be 0.001, however, 
+    // based on my test, it is too slow, alpha = 0.06 works best
+    double alpha = __learningRate;
+    Matrix dw_Adam = ratio * alpha;
+    //Matrix dw_Adam = ratio * __learningRate;
+    //cout<<"learning rate: "<<__learningRate<<endl;
+    //cout<<"dw_Adam: "<<endl<<dw_Adam<<endl;
+    //getchar();
+
+    return dw_Adam;
 }
 
 void ConstructLayer::SetLearningRate(double l)

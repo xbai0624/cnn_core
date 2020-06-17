@@ -137,6 +137,8 @@ public:
     virtual void Print();
     virtual void PassDataInterface(DataInterface *data_interface);
     virtual void ClearUsedSampleForInputLayer_obsolete();
+    // for Adam optimizer
+    Matrix AdamOptimizer(const Matrix &g_t, int kernel_number);
 
     // getters
     virtual PoolingMethod & GetPoolingMethod();
@@ -285,6 +287,15 @@ private:
     // save accuracy for each batch
     std::vector<float> __accuracyForBatches;
     std::vector<float> __lossForBatches;
+
+    // 12):
+    // Adam optimizer parameters, default to be Adam optimizer
+    //WeightsOptimizer __weights_optimizer = WeightsOptimizer::SGD;
+    WeightsOptimizer __weights_optimizer = WeightsOptimizer::Adam;
+    std::vector<Matrix> Momentum_1st_order;
+    std::vector<Matrix> Momentum_2nd_order;
+    double __beta1_to_power_t = 1.;
+    double __beta2_to_power_t = 1.;
 };
 
 #endif
