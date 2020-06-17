@@ -45,7 +45,7 @@ void Network::ConstructLayers(TrainingType training_type)
     TrainingType resume_or_new_training = TrainingType::NewTraining;
 
     float learning_rate = 0.06; // worked: 0.6
-    float regularization_factor = 0.005; // worked: 0.1
+    float regularization_factor = 0.01; // worked: 0.1
     // for Adam optimizer, the best values seems to be: learning_rate = 0.06; regularization_factor = 0.01;
     //           the smaller the regularization factor, the better the training results
 
@@ -95,12 +95,6 @@ void Network::ConstructLayers(TrainingType training_type)
     __middleAndOutputLayers.push_back(layer_output);
     //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
-
-
-    // after finished training, save all trained weights and bias
-    __inputLayer->SaveTrainedWeightsAndBias();
-    for(auto &i: __middleAndOutputLayers)
-        i->SaveTrainedWeightsAndBias();
 }
 
 /*
@@ -332,9 +326,9 @@ void Network::Train()
         cout<<i<<", "<<endl;
 
     // after finished training, save all trained weights and bias
-    //__inputLayer->SaveTrainedWeightsAndBias();
-    //for(auto &i: __middleAndOutputLayers)
-    //    i->SaveTrainedWeightsAndBias();
+    __inputLayer->SaveTrainedWeightsAndBias();
+    for(auto &i: __middleAndOutputLayers)
+        i->SaveTrainedWeightsAndBias();
 }
 
 void Network::UpdateEpoch()
