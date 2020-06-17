@@ -47,7 +47,11 @@ void Network::ConstructLayers(TrainingType training_type)
     float learning_rate = 0.06; // worked: 0.6
     float regularization_factor = 0.01; // worked: 0.1
     // for Adam optimizer, the best values seems to be: learning_rate = 0.06; regularization_factor = 0.01;
-    //           the smaller the regularization factor, the better the training results
+    //           the smaller the regularization factor, the better the training result seems to be,
+    //           which makes sense, smaller regularization factor means the training is more sensitive to 
+    //           data peculiarities, thus training should seem more better; 
+    //           bigger regularization factor means the training is more foucus on 
+    //           getting small consistent weights, the prediction should be better when training converged.
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
