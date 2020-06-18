@@ -338,9 +338,9 @@ void Network::Train()
         cout<<i<<", "<<endl;
 
     // after finished training, save all trained weights and bias
-    //__inputLayer->SaveTrainedWeightsAndBias();
-    //for(auto &i: __middleAndOutputLayers)
-    //    i->SaveTrainedWeightsAndBias();
+    __inputLayer->SaveTrainedWeightsAndBias();
+    for(auto &i: __middleAndOutputLayers)
+        i->SaveTrainedWeightsAndBias();
 }
 
 void Network::UpdateEpoch()
