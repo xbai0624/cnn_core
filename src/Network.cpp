@@ -32,6 +32,7 @@ void Network::Init()
     //__numberOfEpoch = 10;
 }
 
+/*
 void Network::ConstructLayers(TrainingType training_type)
 {
     // Network structure: {Image->Input->CNN->pooling->CNN->pooling->FC->Output}
@@ -41,8 +42,8 @@ void Network::ConstructLayers(TrainingType training_type)
     //DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(100, 100), 500);
 
     //TrainingType resume_or_new_training = training_type;
-    //TrainingType resume_or_new_training = TrainingType::ResumeTraining;
-    TrainingType resume_or_new_training = TrainingType::NewTraining;
+    TrainingType resume_or_new_training = TrainingType::ResumeTraining;
+    //TrainingType resume_or_new_training = TrainingType::NewTraining;
 
     float learning_rate = 0.06; // worked: 0.6
     float regularization_factor = 0.01; // worked: 0.1
@@ -64,14 +65,14 @@ void Network::ConstructLayers(TrainingType training_type)
 
     // 4) middle layer 3 : cnn layer ID=1
     LayerParameterList p_list1(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 1, 
-	    std::pair<size_t, size_t>(4, 4), learning_rate/*0.*/, false, 0, 0.5, Regularization::L2, regularization_factor/*0*/, ActuationFuncType::Relu, resume_or_new_training);
+	    std::pair<size_t, size_t>(4, 4), learning_rate, false, 0, 0.5, Regularization::L2, regularization_factor, ActuationFuncType::Sigmoid, resume_or_new_training);
     Layer *l1 = new ConstructLayer(p_list1);
     l1->SetPrevLayer(layer_input);
     l1->Init();
 
      // 4) middle layer 3 : cnn layer ID=3
     LayerParameterList p_list3(LayerType::cnn, LayerDimension::_2D, data_interface, 0, 1, 
-	    std::pair<size_t, size_t>(4, 4), learning_rate/*0*/, false, 0, 0.5, Regularization::L2, regularization_factor/*0*/, ActuationFuncType::Relu, resume_or_new_training);
+	    std::pair<size_t, size_t>(4, 4), learning_rate, false, 0, 0.5, Regularization::L2, regularization_factor, ActuationFuncType::Sigmoid, resume_or_new_training);
     Layer *l3 = new ConstructLayer(p_list3);
     l3->SetPrevLayer(l1);
     l3->Init();
@@ -99,9 +100,15 @@ void Network::ConstructLayers(TrainingType training_type)
     __middleAndOutputLayers.push_back(layer_output);
     //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
-}
 
-/*
+
+    // save all initialized weights and bias
+    __inputLayer->SaveTrainedWeightsAndBias();
+    for(auto &i: __middleAndOutputLayers)
+        i->SaveTrainedWeightsAndBias();
+}
+*/
+
 void Network::ConstructLayers(TrainingType training_type)
 {
     // Network structure: {Image->Input->CNN->pooling->CNN->pooling->FC->Output}
@@ -113,8 +120,8 @@ void Network::ConstructLayers(TrainingType training_type)
     //TrainingType resume_or_new_training = training_type;
     //TrainingType resume_or_new_training = TrainingType::ResumeTraining;
     TrainingType resume_or_new_training = TrainingType::NewTraining;
-    float learning_rate = 0.02;
-    float regularization_factor = 0.0001;
+    float learning_rate = 0.06;
+    float regularization_factor = 0.005;
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
@@ -188,8 +195,6 @@ void Network::ConstructLayers(TrainingType training_type)
     //cout<<"total number of layers: "<<__middleAndOutputLayers.size()<<endl;
     __dataInterface = data_interface;
 }
-*/
-
 
 /*
 void Network::ConstructLayers(TrainingType _training_type) // test purelly fully connected
@@ -330,9 +335,9 @@ void Network::Train()
         cout<<i<<", "<<endl;
 
     // after finished training, save all trained weights and bias
-    __inputLayer->SaveTrainedWeightsAndBias();
-    for(auto &i: __middleAndOutputLayers)
-        i->SaveTrainedWeightsAndBias();
+    //__inputLayer->SaveTrainedWeightsAndBias();
+    //for(auto &i: __middleAndOutputLayers)
+    //    i->SaveTrainedWeightsAndBias();
 }
 
 void Network::UpdateEpoch()
