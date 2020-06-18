@@ -2,6 +2,8 @@
 This is a Convolutional Neural Network (CNN) and Deep Neural Network (DNN) package developed 
 for classification of calorimeter signals.
 
+Refer to the included "Introduction_Tutorial_Example.pdf" for a detailed introduction.
+
 This package directly employed backpropagation algorithm, and was built from the ground,
 under the CentOS 7.8 enviroment using gcc 4.8.
 It does NOT rely on any availabe external Neural Network libraries, 
