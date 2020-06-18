@@ -37,6 +37,7 @@
 
 #include <vector>
 #include <ostream>
+#include <atomic>
 
 enum class HadamardOps 
 {
@@ -156,6 +157,7 @@ public:
 
 private:
     std::vector<std::vector<float>> __M;
+    static std::atomic<unsigned int> seed; // seed for random generator
 };
 
 std::ostream& operator<<(std::ostream& os, Matrix&);
