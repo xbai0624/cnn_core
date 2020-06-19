@@ -44,8 +44,8 @@ void Network::ConstructLayers(TrainingType training_type)
     //DataInterface *data_interface = new DataInterface("test_data/data_signal_train.dat", "test_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(100, 100), 500);
 
     //TrainingType resume_or_new_training = training_type;
-    TrainingType resume_or_new_training = TrainingType::ResumeTraining;
-    //TrainingType resume_or_new_training = TrainingType::NewTraining;
+    //TrainingType resume_or_new_training = TrainingType::ResumeTraining;
+    TrainingType resume_or_new_training = TrainingType::NewTraining;
 
     float learning_rate = 0.06; // worked: 0.6
     float regularization_factor = 0.01; // worked: 0.1
@@ -106,9 +106,9 @@ void Network::ConstructLayers(TrainingType training_type)
 
 
     // save all initialized weights and bias
-    __inputLayer->SaveTrainedWeightsAndBias();
-    for(auto &i: __middleAndOutputLayers)
-        i->SaveTrainedWeightsAndBias();
+    //__inputLayer->SaveTrainedWeightsAndBias();
+    //for(auto &i: __middleAndOutputLayers)
+    //    i->SaveTrainedWeightsAndBias();
 }
 */
 
