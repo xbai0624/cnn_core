@@ -773,7 +773,8 @@ static double cross_entropy(Matrix &A, Matrix &Y)
     {
 	if(A[i][0] ==0 || A[i][0] == 1) res += 0;
 	else
-	    res += Y[i][0] * log(A[i][0]) + (1. - Y[i][0]) * log(1. - A[i][0]);
+	    //res += Y[i][0] * log(A[i][0]) + (1. - Y[i][0]) * log(1. - A[i][0]);
+	    res += Y[i][0] * log(A[i][0]); 
     }
 
     return res; // no minus symbol here, 

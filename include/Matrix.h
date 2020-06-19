@@ -27,7 +27,7 @@
  *   For fast operation, you can turn on multithreading, how many threads
  *   can be configured in Matrix.cpp source file by a macro
  *
- *   currently only accept float type element
+ *   To make the program efficiency, currently only float type element is accepted
  *
  *   @Xinzhan Bai, v0.0 1-31-2019
  */

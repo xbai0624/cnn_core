@@ -64,10 +64,15 @@ static std::vector<std::pair<std::pair<size_t, size_t>, std::pair<size_t, size_t
 }
 #endif
 
-static std::random_device rd;
-std::atomic<unsigned int> Matrix::seed{rd()};
+// method 1
+//static std::random_device rd;
+//std::atomic<unsigned int> Matrix::seed{rd()};
+
+// method 2
 //std::atomic<unsigned int> Matrix::seed{491856570}; // initialize seed for random generator
-//std::atomic<unsigned int> Matrix::seed{1}; // initialize seed for random generator
+
+// method 3
+std::atomic<unsigned int> Matrix::seed{1}; // initialize seed for random generator
 
 Matrix::Matrix()
 {
@@ -487,11 +492,11 @@ void Matrix::Random()
     // fill with random numbers
     // uniform (0,1) distribution
     //std::cout<<"Filling matrix using flat (0, 1) distribution"<<std::endl;
-    //std::random_device rd;
-    //std::mt19937 mt(rd());
-    unsigned int SEED = seed;
-    std::mt19937 mt(SEED);
-    seed = seed + 1;
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    //unsigned int SEED = seed;
+    //std::mt19937 mt(SEED);
+    //seed = seed + 1;
     std::uniform_real_distribution<float> dist(0, 1.);
 
     for(size_t i=0;i<__M.size();i++){
@@ -507,11 +512,11 @@ void Matrix::Random(float min, float max)
     // fill with random numbers
     // uniform (0,1) distribution
     //std::cout<<"Filling matrix using flat (0, 1) distribution"<<std::endl;
-    //std::random_device rd;
-    //std::mt19937 mt(rd());
-    unsigned int SEED = seed;
-    std::mt19937 mt(SEED);
-    seed = seed+1;
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    //unsigned int SEED = seed;
+    //std::mt19937 mt(SEED);
+    //seed = seed+1;
     std::uniform_real_distribution<float> dist(min, max);
 
     for(size_t i=0;i<__M.size();i++){
@@ -529,6 +534,7 @@ void Matrix::RandomGaus(float mu, float sigma)
     //std::cout<<"Filling matrix using flat (0, 1) distribution"<<std::endl;
     std::random_device rd;
     std::mt19937 mt(rd());
+
     //unsigned int SEED = seed;
     //std::mt19937 mt(SEED);
     //seed = seed + 1;
@@ -625,18 +631,58 @@ Matrix Matrix::Reshape(size_t m, size_t n) const
 
 Matrix Matrix::Normalization()
 {
+    // includes normalization, centering and standarization per sample
     auto dim = Dimension();
     Matrix m(dim);
 
+    // step 1) normalize
     float min = MinInSection(0, dim.first, 0, dim.second);
     float max = MaxInSection(0, dim.first, 0, dim.second);
 
     float amp = max - min;
-    assert(amp > 0);
 
-    for(size_t i=0;i<dim.first;i++)
+    if(amp > 0)
+	for(size_t i=0;i<dim.first;i++)
+	    for(size_t j=0;j<dim.second;j++)
+		m[i][j] = (*this)[i][j] / amp;
+
+    // step 2) cenering
+    float average = 0;
+    // find min, max, mean
+    for(size_t i=0;i<dim.first;i++){
         for(size_t j=0;j<dim.second;j++)
-	    m[i][j] = (*this)[i][j] / amp;
+	{
+	    average += m[i][j];
+	}
+    }
+    float N = dim.first * dim.second;
+    average /= N;
+    if(average != 0)
+	for(size_t i=0;i<dim.first;i++){
+	    for(size_t j=0;j<dim.second;j++)
+	    {
+		m[i][j] = m[i][j] - average;
+	    }
+	}
+
+    // step 3) standardization
+    // find sigma
+    float sigma = 0;
+    for(size_t i=0;i<dim.first;i++){
+        for(size_t j=0;j<dim.second;j++)
+	{
+	    float tmp = m[i][j];
+	    sigma += tmp*tmp;
+	}
+    }
+    sigma = sqrt(sigma);
+    if(sigma > 0)
+	for(size_t i=0;i<dim.first;i++){
+	    for(size_t j=0;j<dim.second;j++)
+	    {
+		m[i][j]/=sigma;
+	    }
+	}
 
     return m;
 }
