@@ -299,7 +299,7 @@ private:
 
     // 13):
     // input data whitening
-    bool __input_data_batch_whitening = false; // default to using batch data whitening
+    bool __input_data_batch_whitening = true; // default to using batch data whitening
 };
 
 #endif

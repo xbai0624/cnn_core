@@ -19,6 +19,14 @@ namespace TOOLS
 	    shuffle(vec.begin(), vec.end(), std::default_random_engine(seed));
 	}
 
+    template<class T1, class T2>
+	void Shuffle(std::vector<T1> &vec1, std::vector<T2> &vec2) 
+	{
+	    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+	    shuffle(vec1.begin(), vec1.end(), std::default_random_engine(seed));
+	    shuffle(vec2.begin(), vec2.end(), std::default_random_engine(seed));
+	}
+
     template<typename T>
 	void INFO(T info)
 	{

@@ -123,7 +123,7 @@ void Network::ConstructLayers(TrainingType training_type)
     //TrainingType resume_or_new_training = training_type;
     //TrainingType resume_or_new_training = TrainingType::ResumeTraining;
     TrainingType resume_or_new_training = TrainingType::NewTraining;
-    double learning_rate = 0.06;
+    double learning_rate = 0.01; //0.06;
     double regularization_factor = 0.005;
 
     // 3) input layer   ID=0

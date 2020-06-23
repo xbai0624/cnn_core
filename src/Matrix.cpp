@@ -69,10 +69,10 @@ static std::vector<std::pair<std::pair<size_t, size_t>, std::pair<size_t, size_t
 //std::atomic<unsigned int> Matrix::seed{rd()};
 
 // method 2
-std::atomic<unsigned int> Matrix::seed{491856570}; // initialize seed for random generator
+//std::atomic<unsigned int> Matrix::seed{491856570}; // initialize seed for random generator
 
 // method 3
-//std::atomic<unsigned int> Matrix::seed{1}; // initialize seed for random generator
+std::atomic<unsigned int> Matrix::seed{1}; // initialize seed for random generator
 
 Matrix::Matrix()
 {
@@ -115,6 +115,7 @@ Matrix::Matrix(std::vector<std::vector<double>> &vv)
 Matrix::~Matrix()
 {
     // place holder
+    __M.resize(0);
 }
 
 Matrix Matrix::operator*(Matrix &B)
@@ -541,12 +542,12 @@ void Matrix::RandomGaus(double mu, double sigma)
     // fill with random numbers
     // uniform (0,1) distribution
     //std::cout<<"Filling matrix using flat (0, 1) distribution"<<std::endl;
-    std::random_device rd;
-    std::mt19937 mt(rd());
+    //std::random_device rd;
+    //std::mt19937 mt(rd());
 
-    //unsigned int SEED = seed;
-    //std::mt19937 mt(SEED);
-    //seed = seed + 1;
+    unsigned int SEED = seed;
+    std::mt19937 mt(SEED);
+    seed = seed + 1;
 
     std::normal_distribution<double> dist(mu, sigma);
     for(size_t i=0;i<__M.size();i++){
