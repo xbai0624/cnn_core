@@ -13,7 +13,7 @@
 
 using namespace std;
 
-static float SGN(float x)
+static double SGN(double x)
 {
     if( x == 0) return 0;
     return x>0?1:-1;
@@ -565,8 +565,8 @@ void  ConstructLayer::InitWeightsAndBias()
 
     // total_entries is used to randomly initialize weight matrix, 
     // using a Gaussian distribution, wieth mean=0, sigma = 1/sqrt(total_entries)
-    //float total_entries = (float)batch_size * (float)N; // use this one, it is better (incorrect)
-    //float total_entries = (float)batch_size;          // this one is not as good as the above one (incorrect)
+    //double total_entries = (double)batch_size * (double)N; // use this one, it is better (incorrect)
+    //double total_entries = (double)batch_size;          // this one is not as good as the above one (incorrect)
 
     if(__type == LayerType::fullyConnected || __type == LayerType::output) // output layer is also a fully connected layer
     {
@@ -588,9 +588,9 @@ void  ConstructLayer::InitWeightsAndBias()
 	{
 	    // for non-ReLu actuation functions, use Xavier initialization
 	    // random with a normal distribution with sigma = 1/sqrt(number of fan-in neurons)
-	    w.RandomGaus(0., 1./sqrt((float)n_prev)); // (0, sqrt(n_neuron)) normal distribution
+	    w.RandomGaus(0., 1./sqrt((double)n_prev)); // (0, sqrt(n_neuron)) normal distribution
 
-	    //w.RandomGaus(0., 1./sqrt((float)total_entries)); // (0, sqrt(n_neuron)) normal distribution
+	    //w.RandomGaus(0., 1./sqrt((double)total_entries)); // (0, sqrt(n_neuron)) normal distribution
 	}
 	else
 	{
@@ -600,7 +600,7 @@ void  ConstructLayer::InitWeightsAndBias()
 
 	    // step 2): then hadamard the weight matrix with a number sqrt(2/n)
 	    //          where n is the fan-in neurons (number of neurons in previous layer)
-	    w = w*sqrt(2./(float)n_prev);
+	    w = w*sqrt(2./(double)n_prev);
 	}
 	__weightMatrix.push_back(w);
 
@@ -630,15 +630,15 @@ void  ConstructLayer::InitWeightsAndBias()
 	    {
 	        // for non-ReLu neurons, use Xavier initialization
 		int fan_in_neurons = __prevLayer->GetNumberOfNeurons();
-		w.RandomGaus(0., 1./sqrt((float)fan_in_neurons));
-		//w.RandomGaus(0., 1./sqrt((float)total_entries));
+		w.RandomGaus(0., 1./sqrt((double)fan_in_neurons));
+		//w.RandomGaus(0., 1./sqrt((double)total_entries));
 	    }
 	    else
 	    {
 	        // for ReLu neurons, use Kaiming He method
 		w.RandomGaus(0., 1.);
 		int fan_in_neurons = __prevLayer->GetNumberOfNeurons();
-		w = w * sqrt(2./ (float) fan_in_neurons);
+		w = w * sqrt(2./ (double) fan_in_neurons);
 	    }
 	    __weightMatrix.push_back(w);
 
@@ -760,6 +760,8 @@ void ConstructLayer::BackwardPropagateForSample(int sample_index)
     }
 }
 
+//#include <mutex>
+//mutex mtx;
 
 // cost functions ---------- cross entropy 
 static double cross_entropy(Matrix &A, Matrix &Y)
@@ -771,10 +773,10 @@ static double cross_entropy(Matrix &A, Matrix &Y)
     double res = 0.;
     for(size_t i=0;i<dim.first;i++)
     {
-	if(A[i][0] ==0 || A[i][0] == 1) res += 0;
+	if((double)A[i][0] <= 1e-10 || (double)A[i][0] >= 1-1e-10) res += 0;
 	else
 	    //res += Y[i][0] * log(A[i][0]) + (1. - Y[i][0]) * log(1. - A[i][0]);
-	    res += Y[i][0] * log(A[i][0]); 
+	    res += (double)Y[i][0] * log((double)A[i][0]); 
     }
 
     return res; // no minus symbol here, 
@@ -913,6 +915,10 @@ void ConstructLayer::FillBatchDataToInputLayerA()
     std::vector<Matrix> & input_data = __p_data_interface->GetCurrentBatchData();
     //cout<<">>>: "<<input_data.size()<<" samples in current batch from data interface"<<endl;
 
+    // input data whitening
+    if(__input_data_batch_whitening)
+	Matrix::BatchNormalization(input_data);
+
     // first clear the previous batch
     __imageA.clear(); // input layer dropout is not used
     __imageAFull.clear();
@@ -959,10 +965,10 @@ static Matrix filterMatrix(Matrix &A, Filter2D &F)
     auto dimF = F.Dimension();
     assert(dimA == dimF);
 
-    vector<vector<float>> R;
+    vector<vector<double>> R;
     for(size_t i=0;i<dimA.first;i++)
     {
-	vector<float> _tmp_row;
+	vector<double> _tmp_row;
 	for(size_t j=0;j<dimA.second;j++)
 	{
 	    if(F[i][j]==1)
@@ -1728,7 +1734,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 	    if(!filter_M[i][0]) continue;
 
 	    // weight
-	    std::vector<float> act_row;
+	    std::vector<double> act_row;
 	    for(size_t j=0;j<dim.second;j++)
 	    {
 		if(__prevLayer != nullptr &&   // current layer is not input layer
@@ -1742,15 +1748,15 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 		}
 		act_row.push_back(ori_M[i][j]);
 	    }
-	    std::vector<std::vector<float>> act_M;
+	    std::vector<std::vector<double>> act_M;
 	    act_M.push_back(act_row);
 	    Matrix tmp(act_M);
 	    __weightMatrixActive.push_back(tmp);
 
 	    // bias
-	    std::vector<float> act_bias;
+	    std::vector<double> act_bias;
 	    act_bias.push_back(__biasVector[0][i][0]);
-	    std::vector<std::vector<float>> act_b;
+	    std::vector<std::vector<double>> act_b;
 	    act_b.push_back(act_bias);
 	    Matrix tmp_b(act_b);
 	    __biasVectorActive.push_back(tmp_b);
@@ -1816,7 +1822,7 @@ NeuronCoord ConstructLayer::GetActiveNeuronDimension()
     return __activeNeuronDim;
 }
 
-void ConstructLayer::SetDropOutFactor(float f)
+void ConstructLayer::SetDropOutFactor(double f)
 {
     __dropOut = f;
 }
@@ -1867,7 +1873,7 @@ LayerDimension ConstructLayer::GetLayerDimension()
     return __layerDimension;
 }
 
-float ConstructLayer::GetDropOutFactor()
+double ConstructLayer::GetDropOutFactor()
 {
     return __dropOut;
 }
@@ -2053,6 +2059,9 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
     {
 	Matrix a_matrix = a_images[i].OutputImageFromKernel[0]; // 'a' image from previous layer
 	Matrix d_matrix = d_images[i].OutputImageFromKernel[0]; // 'd' image from current layer
+	//cout<<"Layer id: "<<GetID()<<endl;
+	//cout<<"a matrix: "<<endl<<a_matrix<<endl;
+	//cout<<"delta matrix: "<<endl<<d_matrix<<endl;
 
 	auto d1 = (__weightMatrix[0]).Dimension(), d2 = a_matrix.Dimension(), d3 = d_matrix.Dimension();
 	if(d1.first != d3.first || d1.second != d2.first)
@@ -2145,7 +2154,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
     if(__weights_optimizer == WeightsOptimizer::SGD)
     {
         // standard SGD 
-	dw = dw * float(__learningRate/(double)M); // over batch 
+	dw = dw * double(__learningRate/(double)M); // over batch 
     }
     else if(__weights_optimizer == WeightsOptimizer::Adam)
     {
@@ -2153,9 +2162,9 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
 	dw = dw * (1./ (double)M );
 
 	//Matrix tmp = dw * __learningRate;
-	//cout<<"Before adam: "<<tmp<<endl;
+	//cout<<"Before adam: "<<endl<<dw<<endl;
         dw = AdamOptimizer(dw, 0);
-	//cout<<"after adam: "<<dw<<endl;
+	//cout<<"after adam: "<<endl<<dw<<endl;
 	//getchar();
     }
     else
@@ -2163,7 +2172,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
         std::cout<<__func__<<" Error: unsupported optimization method."<<std::endl;
 	exit(0);
     }
-    //cout<<"learning rate: "<<float(__learningRate/(double)M)<<endl;
+    //cout<<"learning rate: "<<double(__learningRate/(double)M)<<endl;
 
     // Get filter Matrix for masking Regularization item
     assert(__activeFlag.size() == 1);
@@ -2216,7 +2225,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
 	
 	// new
 	// hadamard multiply with F to maks out all inactive elements
-	Matrix regularization_M = (__weightMatrix[0]^F) *(__learningRate * __regularizationParameter/((float)M)); 
+	Matrix regularization_M = (__weightMatrix[0]^F) *(__learningRate * __regularizationParameter/((double)M)); 
 	Matrix total_correction_M = regularization_M + dw; // dw already include learning rate during generation
 	__weightMatrix[0] = __weightMatrix[0] - total_correction_M;
     } 
@@ -2376,7 +2385,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	if(__weights_optimizer == WeightsOptimizer::SGD)
 	{
 	    // stochastic gradient descent
-	    dw = dw * float(__learningRate/(double)M); // gradients average over batch size
+	    dw = dw * double(__learningRate/(double)M); // gradients average over batch size
 	}
 	else if(__weights_optimizer == WeightsOptimizer::Adam)
 	{
@@ -2400,11 +2409,11 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	if(__regularizationMethod == Regularization::L2)
 	{
 	    // obsolete
-	    //f_regularization = 1 - __learningRate * __regularizationParameter / (float)M;
+	    //f_regularization = 1 - __learningRate * __regularizationParameter / (double)M;
 	    //(__weightMatrix[k]) = (__weightMatrix[k])*f_regularization;
 	    //(__weightMatrix[k]) = (__weightMatrix[k]) - dw;
 
-	    Matrix regularization_M = (__weightMatrix[k]^F) * (__learningRate * __regularizationParameter/((float)M));
+	    Matrix regularization_M = (__weightMatrix[k]^F) * (__learningRate * __regularizationParameter/((double)M));
 	    Matrix total_correction_M = regularization_M + dw; // dw already have learing rate multiplied
 	    __weightMatrix[k] = __weightMatrix[k] - total_correction_M;
 	}
@@ -2413,7 +2422,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	    Matrix tmp = (__weightMatrixActive[k]);
 	    tmp(&SGN);
 	    tmp = tmp^F; // hadamard operation to mask out all inactive elements
-	    tmp = tmp * (__learningRate*__regularizationParameter/(float)M);
+	    tmp = tmp * (__learningRate*__regularizationParameter/(double)M);
 	    //(*__w) = (*__w) - tmp - dw;
 	    (__weightMatrix[k]) = (__weightMatrix[k]) - dw;
 	    (__weightMatrix[k]) = (__weightMatrix[k]) - tmp;
@@ -2429,7 +2438,7 @@ void ConstructLayer::UpdateWeightsAndBiasCNN()
 	for(size_t i=0;i<M;i++){
 	    db = db + __bGradient[i].OutputImageFromKernel[k];
 	}
-	db = db * float(__learningRate / (float)M);
+	db = db * double(__learningRate / (double)M);
 	__biasVector[k] = __biasVector[k] - db;
     }
 }
@@ -2450,9 +2459,9 @@ void ConstructLayer::UpdateWeightsAndBiasPooling()
     return; 
 }
 
-static float __AdamSquareRoot(float v)
+static double __AdamSquareRoot(double v)
 {
-    return sqrt(v);
+    return sqrt((double)v);
 }
 
 Matrix ConstructLayer::AdamOptimizer(const Matrix &dw, int kernel_index)
@@ -2663,7 +2672,7 @@ void ConstructLayer::SaveAccuracyAndCostForBatch()
     std::vector<Matrix> & batch_labels =  __p_data_interface -> GetCurrentBatchLabel();
     assert(__imageA.size() == batch_labels.size());
 
-    float correct_prediction = 0.;
+    double correct_prediction = 0.;
     for(size_t i=0;i<batch_labels.size();i++)
     {
         Matrix & label_sample = batch_labels[i];
@@ -2674,9 +2683,9 @@ void ConstructLayer::SaveAccuracyAndCostForBatch()
 	assert(dim.second == 1);
 
         std::pair<size_t, size_t> max_coord;
-	float max = output_sample.MaxInSection(0, dim.first, 0, dim.second, max_coord);
+	double max = output_sample.MaxInSection(0, dim.first, 0, dim.second, max_coord);
 
-        float confidence_threshold = 0.8;
+        double confidence_threshold = 0.8;
 	if (max > confidence_threshold)
 	{
 	    Matrix tmp(dim, 0);
@@ -2688,14 +2697,14 @@ void ConstructLayer::SaveAccuracyAndCostForBatch()
 
     }
 
-    float accuracy_for_this_batch = correct_prediction / (int)batch_labels.size();
+    double accuracy_for_this_batch = correct_prediction / (int)batch_labels.size();
     __accuracyForBatches.push_back(accuracy_for_this_batch);
 
     // cost
-    float cost = 0.;
+    double cost = 0.;
     for(auto &i: __outputLayerCost)
         cost += i;
-    cost /= (float)__outputLayerCost.size();
+    cost /= (double)__outputLayerCost.size();
 
     __lossForBatches.push_back(-cost);
 
@@ -2703,13 +2712,13 @@ void ConstructLayer::SaveAccuracyAndCostForBatch()
     std::cout<<"............    losss for batch training: "<<-cost<<endl;
 }
 
-std::vector<float> & ConstructLayer::GetAccuracyForBatches()
+std::vector<double> & ConstructLayer::GetAccuracyForBatches()
 {
     return __accuracyForBatches;
 }
 
 
-std::vector<float> & ConstructLayer::GetCostForBatches()
+std::vector<double> & ConstructLayer::GetCostForBatches()
 {
     return __lossForBatches;
 }
@@ -2781,11 +2790,11 @@ void ConstructLayer::LoadTrainedWeightsAndBias()
     }
 
     // a helper
-    auto parseLine = [&](std::string line) -> std::vector<float>
+    auto parseLine = [&](std::string line) -> std::vector<double>
     {
-        std::vector<float> tmp;
+        std::vector<double> tmp;
         istringstream iss(line);
-	float v;
+	double v;
 	while(iss>>v)
 	{
 	    tmp.push_back(v);
@@ -2794,10 +2803,10 @@ void ConstructLayer::LoadTrainedWeightsAndBias()
     };
 
     std::string line;
-    std::vector<std::vector<float>> vv;
+    std::vector<std::vector<double>> vv;
     while(getline(ff, line))
     {
-        std::vector<float> v_line;
+        std::vector<double> v_line;
         if(line.find("weight") != std::string::npos)
 	{
 	    if(vv.size() > 0) // last read is bias matrix

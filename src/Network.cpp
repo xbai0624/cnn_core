@@ -47,8 +47,8 @@ void Network::ConstructLayers(TrainingType training_type)
     //TrainingType resume_or_new_training = TrainingType::ResumeTraining;
     TrainingType resume_or_new_training = TrainingType::NewTraining;
 
-    float learning_rate = 0.06; // worked: 0.6
-    float regularization_factor = 0.01; // worked: 0.1
+    double learning_rate = 0.06; // worked: 0.6
+    double regularization_factor = 0.01; // worked: 0.1
     // for Adam optimizer, the best values seems to be: learning_rate = 0.06; regularization_factor = 0.01;
     //           even though the paper (https://arxiv.org/pdf/1412.6980.pdf) suggested learning_rate to be 0.01;
     //           the smaller the regularization factor, the better the training result seems to be,
@@ -123,8 +123,8 @@ void Network::ConstructLayers(TrainingType training_type)
     //TrainingType resume_or_new_training = training_type;
     //TrainingType resume_or_new_training = TrainingType::ResumeTraining;
     TrainingType resume_or_new_training = TrainingType::NewTraining;
-    float learning_rate = 0.06;
-    float regularization_factor = 0.005;
+    double learning_rate = 0.06;
+    double regularization_factor = 0.005;
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
@@ -205,7 +205,7 @@ void Network::ConstructLayers(TrainingType _training_type) // test purelly fully
     // Network structure: {Image->Input->FC->FC->FC->Output}
     TrainingType training_type = _training_type;
     training_type = TrainingType::NewTraining;
-    float learning_rate = 4.;
+    double learning_rate = 4.;
 
     // 1) Data interface, this is a tool class, for data prepare
     DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_1D, std::pair<int, int>(900, 1), 200);
@@ -262,7 +262,7 @@ void Network::ConstructLayers(TrainingType trtp) // test fully connected + cnn
     //TrainingType training_type = trtp;
     TrainingType training_type = TrainingType::NewTraining;
     //TrainingType training_type = TrainingType::ResumeTraining;
-    float learning_rate = 0.6;
+    double learning_rate = 0.6;
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 
@@ -327,13 +327,13 @@ void Network::Train()
 
     // check accuracy track of training
     cout<<"accuracy: "<<endl;
-    std::vector<float> & accuracy = __outputLayer->GetAccuracyForBatches();
+    std::vector<double> & accuracy = __outputLayer->GetAccuracyForBatches();
     for(auto &i: accuracy)
         cout<<i<<",   "<<endl;
 
     // check cost track of training
     cout<<"cost: "<<endl;
-    std::vector<float> &cost = __outputLayer->GetCostForBatches();
+    std::vector<double> &cost = __outputLayer->GetCostForBatches();
     for(auto &i: cost)
         cout<<i<<", "<<endl;
 
@@ -504,13 +504,13 @@ std::vector<Matrix> Network::Classify()
 
     // check accuracy 
     cout<<"accuracy: "<<endl;
-    std::vector<float> & accuracy = __outputLayer->GetAccuracyForBatches();
+    std::vector<double> & accuracy = __outputLayer->GetAccuracyForBatches();
     for(auto &i: accuracy)
 	cout<<i<<",   "<<endl;
 
     // check cost 
     cout<<"cost: "<<endl;
-    std::vector<float> &cost = __outputLayer->GetCostForBatches();
+    std::vector<double> &cost = __outputLayer->GetCostForBatches();
     for(auto &i: cost)
 	cout<<i<<", "<<endl;
 

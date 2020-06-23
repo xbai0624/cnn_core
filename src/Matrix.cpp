@@ -69,42 +69,42 @@ static std::vector<std::pair<std::pair<size_t, size_t>, std::pair<size_t, size_t
 //std::atomic<unsigned int> Matrix::seed{rd()};
 
 // method 2
-//std::atomic<unsigned int> Matrix::seed{491856570}; // initialize seed for random generator
+std::atomic<unsigned int> Matrix::seed{491856570}; // initialize seed for random generator
 
 // method 3
-std::atomic<unsigned int> Matrix::seed{1}; // initialize seed for random generator
+//std::atomic<unsigned int> Matrix::seed{1}; // initialize seed for random generator
 
 Matrix::Matrix()
 {
     // defulat constructor
-    __M.resize(1, std::vector<float>(1, 0));
+    __M.resize(1, std::vector<double>(1, 0));
 }
 
 Matrix::Matrix(size_t r, size_t c) 
 {
     // constructor
-    __M.resize(r, std::vector<float>(c, 0));
+    __M.resize(r, std::vector<double>(c, 0));
 }
 
 Matrix::Matrix(std::pair<size_t, size_t> c)
 {
     // constructor
-    __M.resize(c.first, std::vector<float>(c.second, 0));
+    __M.resize(c.first, std::vector<double>(c.second, 0));
 }
 
-Matrix::Matrix(size_t r, size_t c, float v) 
+Matrix::Matrix(size_t r, size_t c, double v) 
 {
     // constructor and initialize all elements with a value v
-    __M.resize(r, std::vector<float>(c, v));
+    __M.resize(r, std::vector<double>(c, v));
 }
 
-Matrix::Matrix(std::pair<size_t, size_t> c, float v)
+Matrix::Matrix(std::pair<size_t, size_t> c, double v)
 {
     // constructor and initialize all elements with a value v
-    __M.resize(c.first, std::vector<float>(c.second, v));
+    __M.resize(c.first, std::vector<double>(c.second, v));
 }
 
-Matrix::Matrix(std::vector<std::vector<float>> &vv)
+Matrix::Matrix(std::vector<std::vector<double>> &vv)
 {
     // constructor and initilize matrix with a 2D vector vv
     size_t nRow = vv.size();
@@ -255,7 +255,7 @@ Matrix Matrix::operator/(Matrix &B)
     return C;
 }
 
-Matrix Matrix::operator+(float v)
+Matrix Matrix::operator+(double v)
 {
     // scalar plus operation: A+v = C
     Matrix C(this->Dimension());
@@ -279,7 +279,7 @@ Matrix Matrix::operator+(float v)
     return C;
 }
 
-Matrix Matrix::operator-(float v)
+Matrix Matrix::operator-(double v)
 {
     // scalar subtraction operation: A-v = C
     Matrix C(this->Dimension());
@@ -303,7 +303,7 @@ Matrix Matrix::operator-(float v)
     return C;
 }
 
-Matrix Matrix::operator*(float v)
+Matrix Matrix::operator*(double v)
 {
     // scalar multiply operation: A*v = C
     Matrix C(this->Dimension());
@@ -327,7 +327,7 @@ Matrix Matrix::operator*(float v)
     return C;
 }
 
-Matrix Matrix::operator/(float v)
+Matrix Matrix::operator/(double v)
 {
     // scalar division operation: A/v = C
     Matrix C(this->Dimension());
@@ -371,7 +371,7 @@ void Matrix::_hadamard_ComputeSection(HadamardOps op, Matrix &B, Matrix &C, size
     }
 }
 
-void Matrix::_scalar_ComputeSection(HadamardOps op, const float v, Matrix &C, size_t r1, size_t r2, size_t c1, size_t c2)
+void Matrix::_scalar_ComputeSection(HadamardOps op, const double v, Matrix &C, size_t r1, size_t r2, size_t c1, size_t c2)
 {
     // compute a region inside C for scalar operation
     for(size_t i=r1; i<r2; i++)
@@ -395,7 +395,7 @@ void Matrix::_scalar_ComputeSection(HadamardOps op, const float v, Matrix &C, si
     }
 }
 
-std::vector<float>& Matrix::operator[](size_t i)
+std::vector<double>& Matrix::operator[](size_t i)
 {
     // implement a 2d array like operation
     return __M[i];
@@ -457,15 +457,24 @@ void Matrix::_mul_ComputeSection(Matrix &B, Matrix &C, size_t r1, size_t r2, siz
     }
 }
 
-float Matrix::_mul_ComputeElement(Matrix &B, size_t r, size_t c)
+double Matrix::_mul_ComputeElement(Matrix &B, size_t r, size_t c)
 {
     // compute an element in the result matrix, 
     // B is multiplied to this matrix: AxB = C
-    float s = 0;
+    double s = 0;
     for(size_t i=0;i<(*this)[0].size();i++){
 	s += (*this)[r][i] * B[i][c];
     }
     return s;
+}
+
+std::ostream& operator<<(std::ostream &os, std::vector<Matrix> &vM)
+{
+    for(auto &i: vM)
+    {
+        os<<i<<std::endl;
+    }
+    return os;
 }
 
 std::ostream& operator<<(std::ostream &os, Matrix& A)
@@ -477,7 +486,7 @@ std::ostream& operator<<(std::ostream &os, Matrix& A)
     return os;
 }
 
-std::ostream& operator<<(std::ostream &os, std::vector<float>& A)
+std::ostream& operator<<(std::ostream &os, std::vector<double>& A)
 {
     // overload cout for vector
     for(size_t i=0;i<A.size();i++){
@@ -497,7 +506,7 @@ void Matrix::Random()
     //unsigned int SEED = seed;
     //std::mt19937 mt(SEED);
     //seed = seed + 1;
-    std::uniform_real_distribution<float> dist(0, 1.);
+    std::uniform_real_distribution<double> dist(0, 1.);
 
     for(size_t i=0;i<__M.size();i++){
 	for(size_t j=0;j<__M[0].size();j++){
@@ -507,7 +516,7 @@ void Matrix::Random()
     //std::cout<<"Fill finished."<<std::endl;
 }
 
-void Matrix::Random(float min, float max)
+void Matrix::Random(double min, double max)
 {
     // fill with random numbers
     // uniform (0,1) distribution
@@ -517,7 +526,7 @@ void Matrix::Random(float min, float max)
     //unsigned int SEED = seed;
     //std::mt19937 mt(SEED);
     //seed = seed+1;
-    std::uniform_real_distribution<float> dist(min, max);
+    std::uniform_real_distribution<double> dist(min, max);
 
     for(size_t i=0;i<__M.size();i++){
 	for(size_t j=0;j<__M[0].size();j++){
@@ -527,7 +536,7 @@ void Matrix::Random(float min, float max)
     //std::cout<<"Fill finished."<<std::endl;
 }
 
-void Matrix::RandomGaus(float mu, float sigma)
+void Matrix::RandomGaus(double mu, double sigma)
 {
     // fill with random numbers
     // uniform (0,1) distribution
@@ -538,8 +547,8 @@ void Matrix::RandomGaus(float mu, float sigma)
     //unsigned int SEED = seed;
     //std::mt19937 mt(SEED);
     //seed = seed + 1;
-    std::normal_distribution<float> dist(mu, sigma);
 
+    std::normal_distribution<double> dist(mu, sigma);
     for(size_t i=0;i<__M.size();i++){
 	for(size_t j=0;j<__M[0].size();j++){
 	    __M[i][j] = dist(mt);
@@ -555,7 +564,7 @@ std::pair<size_t, size_t> Matrix::Dimension() const
     return std::make_pair<size_t, size_t>(__M.size(), __M[0].size());
 }
 
-void Matrix::operator()(float(*functor)(float))
+void Matrix::operator()(double(*functor)(double))
 {
     // pass a functor to this matrix, and apply this functor to all its elements
 #ifdef MULTITHREAD_MATRIX
@@ -576,7 +585,7 @@ void Matrix::operator()(float(*functor)(float))
 #endif
 }
 
-void Matrix::operator()(float(*functor)(float), size_t r1, size_t r2, size_t c1, size_t c2)
+void Matrix::operator()(double(*functor)(double), size_t r1, size_t r2, size_t c1, size_t c2)
 {
     // pass a functor, apply to a region of the matrix
     if( (int)r1<0 || r2>(*this).size() || r2 <= r1 || c2 <= c1
@@ -636,10 +645,10 @@ Matrix Matrix::Normalization()
     Matrix m(dim);
 
     // step 1) normalize
-    float min = MinInSection(0, dim.first, 0, dim.second);
-    float max = MaxInSection(0, dim.first, 0, dim.second);
+    double min = MinInSection(0, dim.first, 0, dim.second);
+    double max = MaxInSection(0, dim.first, 0, dim.second);
 
-    float amp = max - min;
+    double amp = max - min;
 
     if(amp > 0)
 	for(size_t i=0;i<dim.first;i++)
@@ -647,7 +656,7 @@ Matrix Matrix::Normalization()
 		m[i][j] = (*this)[i][j] / amp;
 
     // step 2) cenering
-    float average = 0;
+    double average = 0;
     // find min, max, mean
     for(size_t i=0;i<dim.first;i++){
         for(size_t j=0;j<dim.second;j++)
@@ -655,7 +664,7 @@ Matrix Matrix::Normalization()
 	    average += m[i][j];
 	}
     }
-    float N = dim.first * dim.second;
+    double N = dim.first * dim.second;
     average /= N;
     if(average != 0)
 	for(size_t i=0;i<dim.first;i++){
@@ -667,11 +676,11 @@ Matrix Matrix::Normalization()
 
     // step 3) standardization
     // find sigma
-    float sigma = 0;
+    double sigma = 0;
     for(size_t i=0;i<dim.first;i++){
         for(size_t j=0;j<dim.second;j++)
 	{
-	    float tmp = m[i][j];
+	    double tmp = m[i][j];
 	    sigma += tmp*tmp;
 	}
     }
@@ -703,7 +712,7 @@ Matrix Matrix::Transpose()
 void Matrix::SetInitialDimension(size_t m, size_t n)
 {
     // this is in order to work with the default empty constructor
-    __M.resize(m, std::vector<float>(n, 0));
+    __M.resize(m, std::vector<double>(n, 0));
 }
 
 void Matrix::Clear()
@@ -712,7 +721,7 @@ void Matrix::Clear()
     __M.clear();
 }
 
-void Matrix::FillElementByRow(size_t index, float v)
+void Matrix::FillElementByRow(size_t index, double v)
 {
     // fill an element to this matrix, row first
     auto dim = Dimension();
@@ -725,7 +734,7 @@ void Matrix::FillElementByRow(size_t index, float v)
     __M[i][j] = v;
 }
 
-void Matrix::FillElementByCollum(size_t index, float v)
+void Matrix::FillElementByCollum(size_t index, double v)
 {
     // fill an element to this matrix, collum first
     auto dim = Dimension();
@@ -738,7 +747,7 @@ void Matrix::FillElementByCollum(size_t index, float v)
     __M[i][j] = v;
 }
 
-float Matrix::ElementSum()
+double Matrix::ElementSum()
 {
     // sum all elements together
     double res = 0;
@@ -752,7 +761,7 @@ float Matrix::ElementSum()
 }
 
 Matrix Matrix::GetSection(size_t r_s, size_t r_e, size_t c_s, size_t c_e, 
-	bool padding, float padding_value)
+	bool padding, double padding_value)
 {
     // get a section of this matrix
     auto dim = Dimension();
@@ -785,7 +794,7 @@ Matrix Matrix::GetSection(size_t r_s, size_t r_e, size_t c_s, size_t c_e,
     return _m;
 }
 
-Matrix Matrix::Padding(size_t ROW, size_t COL, bool pad_front, float padding_value)
+Matrix Matrix::Padding(size_t ROW, size_t COL, bool pad_front, double padding_value)
 {
     // matrix padding, only two modes supported: 1) only pad back, 2) pad back and front
     // only pad front not supported, b/c it's not useful reallistically
@@ -954,7 +963,7 @@ Matrix Matrix::ConcatenateMatrixByJ(std::vector<Matrix> &A)
     return C;
 }
 
-float Matrix::MinInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+double Matrix::MinInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
 {
     // find max element in section [i_start, i_end), and [j_start, j_end)
     // in this code, we all follow the rule: close front and open end
@@ -964,7 +973,7 @@ float Matrix::MinInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
 	std::cout<<"Error: Min in matrix section: exceeded range."<<std::endl;
 	exit(0);
     }
-    float res = __M[i_start][j_start];
+    double res = __M[i_start][j_start];
     for(size_t i=i_start;i<i_end;i++){
 	for(size_t j=j_start;j<j_end;j++){
 	    if(res > __M[i][j])
@@ -975,7 +984,7 @@ float Matrix::MinInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
 }
 
 
-float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+double Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
 {
     // find max element in section [i_start, i_end), and [j_start, j_end)
     // in this code, we all follow the rule: close front and open end
@@ -985,7 +994,7 @@ float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
 	std::cout<<"Error: Max in matrix section: exceeded range."<<std::endl;
 	exit(0);
     }
-    float res = __M[i_start][j_start];
+    double res = __M[i_start][j_start];
     for(size_t i=i_start;i<i_end;i++){
 	for(size_t j=j_start;j<j_end;j++){
 	    if(res < __M[i][j])
@@ -996,7 +1005,7 @@ float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
 }
 
 
-float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end, std::pair<size_t, size_t> &coord)
+double Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end, std::pair<size_t, size_t> &coord)
 {
     // find max element in section [i_start, i_end), and [j_start, j_end)
     // in this code, we all follow the rule: close front and open end
@@ -1006,7 +1015,7 @@ float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
 	std::cout<<"Error: Max in matrix section: exceeded range."<<std::endl;
 	exit(0);
     }
-    float res = __M[i_start][j_start];
+    double res = __M[i_start][j_start];
     for(size_t i=i_start;i<i_end;i++){
 	for(size_t j=j_start;j<j_end;j++)
 	{
@@ -1021,7 +1030,7 @@ float Matrix::MaxInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
 }
 
 
-float Matrix::MaxInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end, float padding_value)
+double Matrix::MaxInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end, double padding_value)
 {
     // find max element in section [i_start, i_end), and [j_start, j_end)
     // in this code, we all follow the rule: close front and open end
@@ -1042,7 +1051,7 @@ float Matrix::MaxInSectionWithPadding(size_t i_start, size_t i_end, size_t j_sta
 	return false;
     };
 
-    float res = 0.;
+    double res = 0.;
     if(in_range(i_start, j_start))
 	res = __M[i_start][j_start];
     else
@@ -1068,7 +1077,7 @@ float Matrix::MaxInSectionWithPadding(size_t i_start, size_t i_end, size_t j_sta
 }
 
 
-float Matrix::SumInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+double Matrix::SumInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
 {
     // find element sum in section [i_start, i_end), and [j_start, j_end)
     // in this code, we all follow the rule: close front and open end
@@ -1078,7 +1087,7 @@ float Matrix::SumInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
 	std::cout<<"Error: Sum in matrix section: exceeded range."<<std::endl;
 	exit(0);
     }
-    float res =  0;
+    double res =  0;
     for(size_t i=i_start;i<i_end;i++){
 	for(size_t j=j_start;j<j_end;j++){
 	    res += __M[i][j];
@@ -1088,7 +1097,7 @@ float Matrix::SumInSection(size_t i_start, size_t i_end, size_t j_start, size_t 
     return res;
 }
 
-float Matrix::SumInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+double Matrix::SumInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
 {
     // find element sum in section [i_start, i_end), and [j_start, j_end)
     // in this code, we all follow the rule: close front and open end
@@ -1106,7 +1115,7 @@ float Matrix::SumInSectionWithPadding(size_t i_start, size_t i_end, size_t j_sta
 	return false;
     };
 
-    float res =  0;
+    double res =  0;
     for(size_t i=i_start;i<i_end;i++){
 	for(size_t j=j_start;j<j_end;j++)
 	{
@@ -1127,7 +1136,7 @@ float Matrix::SumInSectionWithPadding(size_t i_start, size_t i_end, size_t j_sta
 }
 
 
-float Matrix::AverageInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+double Matrix::AverageInSection(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
 {
     // find element average in section [i_start, i_end), and [j_start, j_end)
     // in this code, we all follow the rule: close front and open end
@@ -1137,7 +1146,7 @@ float Matrix::AverageInSection(size_t i_start, size_t i_end, size_t j_start, siz
 	std::cout<<"Error: Max in matrix section: exceeded range."<<std::endl;
 	exit(0);
     }
-    float res =  0;
+    double res =  0;
     for(size_t i=i_start;i<i_end;i++){
 	for(size_t j=j_start;j<j_end;j++){
 	    res += __M[i][j];
@@ -1149,7 +1158,7 @@ float Matrix::AverageInSection(size_t i_start, size_t i_end, size_t j_start, siz
 }
 
 
-float Matrix::AverageInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
+double Matrix::AverageInSectionWithPadding(size_t i_start, size_t i_end, size_t j_start, size_t j_end)
 {
     // find element average in section [i_start, i_end), and [j_start, j_end)
     // in this code, we all follow the rule: close front and open end
@@ -1170,7 +1179,7 @@ float Matrix::AverageInSectionWithPadding(size_t i_start, size_t i_end, size_t j
     size_t x_range = i_end < dim.first ? i_end : dim.first;
     size_t y_range = j_end < dim.second? j_end : dim.second;
 
-    float res =  0;
+    double res =  0;
     for(size_t i=i_start;i<x_range;i++){
 	for(size_t j=j_start;j<y_range;j++)
 	{
@@ -1208,7 +1217,7 @@ Matrix Matrix::Rot_180()
     return _m;
 }
 
-Matrix Matrix::Correlation(Matrix &T, size_t stride, bool pad_front, float padding_value)
+Matrix Matrix::Correlation(Matrix &T, size_t stride, bool pad_front, double padding_value)
 {
     // matrix correlation
     auto l_dim = Dimension();
@@ -1248,7 +1257,7 @@ Matrix Matrix::Correlation(Matrix &T, size_t stride, bool pad_front, float paddi
     return res;
 }
 
-Matrix Matrix::Convolution(Matrix &T, size_t stride, bool pad_front, float padding_value)
+Matrix Matrix::Convolution(Matrix &T, size_t stride, bool pad_front, double padding_value)
 {
     // matrix convolution
     // convolution is correlation with T rotated 180 degree
@@ -1257,7 +1266,7 @@ Matrix Matrix::Convolution(Matrix &T, size_t stride, bool pad_front, float paddi
     return r;
 }
 
-float Matrix::GetCorrelationValue(Matrix &A, Matrix &B, size_t i, size_t j)
+double Matrix::GetCorrelationValue(Matrix &A, Matrix &B, size_t i, size_t j)
 {
     // get the element (i, j) of the correlated matrix, A is input matrix, B is kernel
     // keep in mind this one does not care about matrix dimension, it will fill with 0 value
@@ -1270,7 +1279,7 @@ float Matrix::GetCorrelationValue(Matrix &A, Matrix &B, size_t i, size_t j)
     auto dimA = A.Dimension();
     auto dimB = B.Dimension();
 
-    float res = 0;
+    double res = 0;
     for(size_t p = 0; p<dimB.first;p++)
     {
 	for(size_t q=0; q<dimB.second;q++){
@@ -1287,7 +1296,7 @@ float Matrix::GetCorrelationValue(Matrix &A, Matrix &B, size_t i, size_t j)
     return res;
 }
 
-float Matrix::GetConvolutionValue(Matrix &A, Matrix &B, size_t i, size_t j)
+double Matrix::GetConvolutionValue(Matrix &A, Matrix &B, size_t i, size_t j)
 {
     // get the element (i, j) of the convoluted matrix, A is input matrix, B is kernel
     // keep in mind this one does not care about matrix dimension, it will fill with 0 value
@@ -1300,7 +1309,7 @@ float Matrix::GetConvolutionValue(Matrix &A, Matrix &B, size_t i, size_t j)
     auto dimA = A.Dimension();
     auto dimB = B.Dimension();
 
-    float res = 0;
+    double res = 0;
     for(size_t p = 0; p<dimB.first;p++)
     {
 	for(size_t q=0; q<dimB.second;q++){
@@ -1315,6 +1324,46 @@ float Matrix::GetConvolutionValue(Matrix &A, Matrix &B, size_t i, size_t j)
 	}
     }
     return res;
+}
+
+void Matrix::BatchNormalization(std::vector<Matrix> &vM)
+{
+    // if only one matrix in vM, return. Otherwise the whitening procedure will set every element to 0.
+    if(vM.size() <= 1) return; 
+    auto dim = vM[0].Dimension();
+
+    double epsilon = 1e-8;
+    double batchSize = static_cast<double>(vM.size());
+
+    auto get_mean_and_sigma = [&](size_t i, size_t j, double &mean, double &sigma)
+    {
+        assert((int)i >= 0 && i < dim.first && (int)j >=0 && j < dim.second);
+
+        mean = 0; sigma = 0;
+        for(auto &m: vM) {
+	    mean += m[i][j];
+	}
+	mean /= batchSize;
+
+	for(auto &m: vM){
+	    sigma += (m[i][j] - mean) * (m[i][j] - mean);
+	}
+	sigma /= batchSize;
+	if(batchSize > 1.) sigma *= (batchSize/(batchSize - 1.)); // get the un-biased variate
+	sigma = sqrt(sigma);
+	sigma += epsilon; // avoid divide by zero error
+    };
+
+    // batch normalization
+    for(size_t i=0;i<dim.first;i++){
+	for(size_t j=0;j<dim.second;j++)
+	{
+	    double mean = 0, sigma = 0;
+	    get_mean_and_sigma(i, j, mean, sigma);
+	    for(auto &m: vM)
+		m[i][j] = (m[i][j] - mean)/sigma;
+	}
+    }
 }
 
 void Matrix::DeleteRow(size_t i)
@@ -1342,7 +1391,7 @@ void Matrix::DeleteCollum(size_t i)
     }
 }
 
-void Matrix::InsertRow(size_t i, std::vector<float>* vec)
+void Matrix::InsertRow(size_t i, std::vector<double>* vec)
 {
     // insert vec to matrix at position i
     auto dim = Dimension();
@@ -1355,14 +1404,14 @@ void Matrix::InsertRow(size_t i, std::vector<float>* vec)
 	exit(0);
     }
     if(vec == nullptr){
-	std::vector<float> v(dim.second, 0);
+	std::vector<double> v(dim.second, 0);
 	__M.insert(__M.begin()+i, v);
     } else {
 	__M.insert(__M.begin()+i, (*vec));
     }
 }
 
-void Matrix::InsertCollum(size_t i, std::vector<float>* vec)
+void Matrix::InsertCollum(size_t i, std::vector<double>* vec)
 {
     // insert vec to matrix at position i
     auto dim=Dimension();

@@ -22,12 +22,12 @@ void UnitTest::Test()
 {
     //TestFilter2D();
     //TestImagesStruct();
-    //TestMatrix();
+    TestMatrix();
 
     //TestDNN();
 
     //TestCNN();
-    TestCNNWeightAndBiasEvolution();
+    //TestCNNWeightAndBiasEvolution();
 
     //TestCNNToPooling();
     //TestCNNToCNN();
@@ -136,13 +136,13 @@ void UnitTest::TestMatrix()
     cout<<"Test Matrix."<<endl;
     cout<<m<<endl;
 
-    float v = m.MaxInSectionWithPadding(2, 6, 2, 6);
+    double v = m.MaxInSectionWithPadding(2, 6, 2, 6);
     cout<<v<<endl;
 
     cout<<"Test average in section with padding."<<endl;
     Matrix mm(4, 4, 1);
     cout<<mm<<endl;
-    float vv = mm.AverageInSectionWithPadding(0, 6, 1, 6);
+    double vv = mm.AverageInSectionWithPadding(0, 6, 1, 6);
     cout<<vv<<endl;
 
     Matrix m1(3, 1, 0);
@@ -151,7 +151,6 @@ void UnitTest::TestMatrix()
     cout<<m1<<endl;
     cout<<m2<<endl;
     cout<<"matrix equal: "<<e<<endl;
-*/
 
     Matrix m(4, 10);
     for(int i=0;i<10;i++)
@@ -159,6 +158,29 @@ void UnitTest::TestMatrix()
 	m.RandomGaus(0, 1./100);
 	cout<<m<<endl;
     }
+
+    Matrix m(4, 4, 0);
+    m[3][2] = 1;
+    cout<<m<<endl;
+    Matrix mm = m.Normalization();
+    cout<<mm<<endl;
+*/
+    vector<Matrix> vm;
+    Matrix m1(3, 3, 1);
+    Matrix m2(3, 3, 2);
+    Matrix m3(3, 3, 1);
+    Matrix m4(3, 3, 0);
+
+
+    vm.push_back(m1);
+    vm.push_back(m4);
+    //vm.push_back(m2);
+    //vm.push_back(m3);
+    vm.push_back(m4);
+    cout<<vm<<endl;
+
+    Matrix::BatchNormalization(vm);
+    cout<<vm<<endl;
 }
 
 void UnitTest::TestDNN()
@@ -1003,8 +1025,8 @@ void UnitTest::TestCNNWeightAndBiasEvolution()
     DataInterface *data_interface = new DataInterface("simulation_data/data_signal_train.dat", "simulation_data/data_cosmic_train.dat", LayerDimension::_2D, std::pair<int, int>(10, 10), 200);
 
     TrainingType resume_or_new_training = TrainingType::NewTraining;
-    float learning_rate = 0.06;
-    float regularization_factor = 0.01;
+    double learning_rate = 0.06;
+    double regularization_factor = 0.01;
 
     // 3) input layer   ID=0
     LayerParameterList p_list0(LayerType::input, LayerDimension::_2D, data_interface, 0, 0, 

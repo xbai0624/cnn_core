@@ -25,6 +25,7 @@ enum class ActuationFuncType
     Relu,
     Undefined
 };
+std::ostream & operator<<(std::ostream &, const ActuationFuncType &);
 
 
 // necessary data structures for layer/neuron class
@@ -140,7 +141,7 @@ struct Filter2D
 	return count;
     }
 
-    std::vector<Filter2D> GenerateCompleteDropOutSet(size_t nBatches, float dropoutRatio)
+    std::vector<Filter2D> GenerateCompleteDropOutSet(size_t nBatches, double dropoutRatio)
     {
         // generate a complete set of drop out filters
 	// In this set, each element get acitvated at least once, this is to make sure during drop-out every neuron get trained
@@ -287,7 +288,7 @@ struct NeuronCoord
     //     i  *****************
     //     *  *****************
     //     *  *****************
-    // this way it agrees with matrix: vector<vector<float>>
+    // this way it agrees with matrix: vector<vector<double>>
     size_t i, j, k;
     NeuronCoord(): 
 	i(0), j(0), k(0) 
@@ -393,14 +394,14 @@ struct LayerParameterList
     size_t _nKernels;                   // for cnn and pooling layers
     std::pair<size_t, size_t> _gDimKernel; // kernel dimension for cnn and pooling layers
 
-    float _gLearningRate;               // for non-input layers
+    double _gLearningRate;               // for non-input layers
 
     bool _gUseDropout;                  // for middle layers (non-input, non-output)
     int _gdropoutBranches;               // for middle layers, (set up how many drop-out branch in this layer)
-    float _gDropoutFactor;              // for middle layers
+    double _gDropoutFactor;              // for middle layers
 
     Regularization _gRegularization;              // for non-input layers
-    float _gRegularizationParameter;    // for non-input layers
+    double _gRegularizationParameter;    // for non-input layers
 
     ActuationFuncType _gActuationFuncType;
 
@@ -416,8 +417,8 @@ struct LayerParameterList
     }
 
     LayerParameterList(LayerType layer_type, LayerDimension layer_dimension, DataInterface *data_interface, 
-	    size_t n_neurons, size_t n_kernels, std::pair<size_t, size_t> dimension_kernel, float learning_rate,
-	    bool use_dropout, int dropout_branches, float dropout_factor, Regularization regu, float regu_parameter, 
+	    size_t n_neurons, size_t n_kernels, std::pair<size_t, size_t> dimension_kernel, double learning_rate,
+	    bool use_dropout, int dropout_branches, double dropout_factor, Regularization regu, double regu_parameter, 
 	    ActuationFuncType neuron_act_f_type, TrainingType training_type):
 	_gLayerType(layer_type), _gLayerDimension(layer_dimension), 
 	_pDataInterface(data_interface), _nNeuronsFC(n_neurons), _nKernels(n_kernels), _gDimKernel(dimension_kernel),
@@ -530,7 +531,7 @@ public:
     // setters
     virtual void SetPoolingMethod(PoolingMethod)=0;
     virtual void SetCNNStride(int)=0;
-    virtual void SetDropOutFactor(float)=0;
+    virtual void SetDropOutFactor(double)=0;
     virtual void SetPrevLayer(Layer *) = 0; // pass pointer by reference
     virtual void SetNextLayer(Layer *) = 0; // pass pointer by reference
     virtual void SetCostFuncType(CostFuncType t) = 0;
@@ -548,7 +549,7 @@ public:
     virtual std::vector<Images> & GetBiasGradients() = 0;
     virtual LayerType GetType()=0;
     virtual LayerDimension GetLayerDimension()=0;
-    virtual float GetDropOutFactor()=0;
+    virtual double GetDropOutFactor()=0;
     virtual std::vector<Filter2D>& GetActiveFlag()=0;
     virtual std::pair<size_t, size_t> GetOutputImageSize() = 0; // used for setup layer
     virtual int GetNumberOfNeurons() = 0;
@@ -565,8 +566,8 @@ public:
 
     // result check
     virtual void SaveAccuracyAndCostForBatch() = 0;
-    virtual std::vector<float> &GetAccuracyForBatches() = 0;
-    virtual std::vector<float> &GetCostForBatches() = 0;
+    virtual std::vector<double> &GetAccuracyForBatches() = 0;
+    virtual std::vector<double> &GetCostForBatches() = 0;
 
 private:
     // reserved section

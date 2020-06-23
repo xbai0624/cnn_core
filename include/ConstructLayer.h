@@ -53,7 +53,7 @@ public:
     // setters
     virtual void SetPoolingMethod(PoolingMethod);
     virtual void SetCNNStride(int);
-    virtual void SetDropOutFactor(float);
+    virtual void SetDropOutFactor(double);
     virtual void SetPrevLayer(Layer *); // pass pointer by reference
     virtual void SetNextLayer(Layer *); // pass pointer by reference
     virtual void SetCostFuncType(CostFuncType t);
@@ -151,7 +151,7 @@ public:
     virtual std::vector<Images> &GetBiasGradients();
     virtual LayerType GetType();
     virtual LayerDimension GetLayerDimension();
-    virtual float GetDropOutFactor();
+    virtual double GetDropOutFactor();
     virtual std::vector<Filter2D>& GetActiveFlag();
     virtual std::pair<size_t, size_t> GetOutputImageSize(); // used for setup layer
     virtual std::pair<size_t, size_t> GetOutputImageSizeCNN(); // used for setup layer
@@ -170,8 +170,8 @@ public:
 
     // result check
     virtual void SaveAccuracyAndCostForBatch();
-    virtual std::vector<float> &GetAccuracyForBatches();
-    virtual std::vector<float> &GetCostForBatches();
+    virtual std::vector<double> &GetAccuracyForBatches();
+    virtual std::vector<double> &GetCostForBatches();
 
 private:
     // 1):
@@ -261,7 +261,7 @@ private:
     int __dropOutBranches = 2;
     size_t __dropOutBranchIndex = 0;
     // dropout factor
-    float __dropOut = 0.5;
+    double __dropOut = 0.5;
     // stride, for now x-y share the same stride
     // for now, only use 1. Other values will be implemented with future improvements
     //     !!! note: -- this stride is only for CNN, pooling does not need this parameter, 
@@ -285,8 +285,8 @@ private:
 
     // 11);
     // save accuracy for each batch
-    std::vector<float> __accuracyForBatches;
-    std::vector<float> __lossForBatches;
+    std::vector<double> __accuracyForBatches;
+    std::vector<double> __lossForBatches;
 
     // 12):
     // Adam optimizer parameters, default to be Adam optimizer
@@ -296,6 +296,10 @@ private:
     std::vector<Matrix> Momentum_2nd_order;
     double __beta1_to_power_t = 1.;
     double __beta2_to_power_t = 1.;
+
+    // 13):
+    // input data whitening
+    bool __input_data_batch_whitening = false; // default to using batch data whitening
 };
 
 #endif

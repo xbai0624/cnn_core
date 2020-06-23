@@ -27,7 +27,7 @@
  *   For fast operation, you can turn on multithreading, how many threads
  *   can be configured in Matrix.cpp source file by a macro
  *
- *   To make the program efficiency, currently only float type element is accepted
+ *   To make the program efficiency, currently only double type element is accepted
  *
  *   @Xinzhan Bai, v0.0 1-31-2019
  */
@@ -51,9 +51,9 @@ public:
     Matrix();
     Matrix(size_t, size_t);
     Matrix(std::pair<size_t, size_t>);
-    Matrix(size_t, size_t, float); // initialize all elements with a float 
-    Matrix(std::pair<size_t, size_t>, float); // initialize all elements with a float
-    Matrix(std::vector<std::vector<float>> &); // initialize matrix with a 2D vector
+    Matrix(size_t, size_t, double); // initialize all elements with a double 
+    Matrix(std::pair<size_t, size_t>, double); // initialize all elements with a double
+    Matrix(std::vector<std::vector<double>> &); // initialize matrix with a 2D vector
     ~Matrix();
 
     // overload operator
@@ -63,26 +63,26 @@ public:
     Matrix operator-(Matrix &); // sub
     Matrix operator^(Matrix &); // hadamard multiply
     Matrix operator/(Matrix &); // hadamard division
-    Matrix operator+(float); // sum by a float
-    Matrix operator-(float); // minus by a float
-    Matrix operator*(float); // multiply by a float
-    Matrix operator/(float); // divide by a float
+    Matrix operator+(double); // sum by a double
+    Matrix operator-(double); // minus by a double
+    Matrix operator*(double); // multiply by a double
+    Matrix operator/(double); // divide by a double
 
     bool operator==(Matrix &); // matrix equal to each other
 
-    std::vector<float>& operator[](size_t);
+    std::vector<double>& operator[](size_t);
     size_t size() const;
-    void operator()(float(*funtor)(float)); // apply a functor to matrix element, matrix itself will be changed
-    void operator()(float(*funtor)(float), size_t r1, size_t r2, size_t c1, size_t c2); // same as above, but only apply to a section of the matrix
+    void operator()(double(*funtor)(double)); // apply a functor to matrix element, matrix itself will be changed
+    void operator()(double(*funtor)(double), size_t r1, size_t r2, size_t c1, size_t c2); // same as above, but only apply to a section of the matrix
 
     // multiply
     void _mul_Multiply(Matrix &B, Matrix &C); // (*this) X B = C
     void _mul_ComputeSection(Matrix &B, Matrix &C, size_t r1, size_t r2, size_t c1, size_t c2);
-    float _mul_ComputeElement(Matrix &B, size_t r, size_t c);
+    double _mul_ComputeElement(Matrix &B, size_t r, size_t c);
     // hadamard
     void _hadamard_ComputeSection(HadamardOps op, Matrix &B, Matrix &C, size_t r1, size_t r2, size_t c1, size_t c2);
     // scalar operation
-    void _scalar_ComputeSection(HadamardOps op, const float v, Matrix &C, size_t r1, size_t r2, size_t c1, size_t c2);
+    void _scalar_ComputeSection(HadamardOps op, const double v, Matrix &C, size_t r1, size_t r2, size_t c1, size_t c2);
 
     // set dimension
     void SetInitialDimension(size_t, size_t);
@@ -93,49 +93,49 @@ public:
     Matrix Transpose();
     // rotate
     Matrix Rot_180();
-    // normalization
+    // sample normalization (affine transformation over a single sample, potential use in Layer normalization algorithm)
     Matrix Normalization();
     // get a section of matrix [i, j) [m, n): (front close, back open)
-    Matrix GetSection(size_t, size_t, size_t, size_t, bool padding=false, float padding_value=0);
+    Matrix GetSection(size_t, size_t, size_t, size_t, bool padding=false, double padding_value=0);
     // sum all elements
-    float ElementSum();
+    double ElementSum();
     // max element in section
-    float MaxInSection(size_t, size_t, size_t, size_t);
-    float MinInSection(size_t, size_t, size_t, size_t);
-    float MaxInSection(size_t, size_t, size_t, size_t, std::pair<size_t, size_t> &coord);
-    float MaxInSectionWithPadding(size_t, size_t, size_t, size_t, float padding_value = -9.e10);
+    double MaxInSection(size_t, size_t, size_t, size_t);
+    double MinInSection(size_t, size_t, size_t, size_t);
+    double MaxInSection(size_t, size_t, size_t, size_t, std::pair<size_t, size_t> &coord);
+    double MaxInSectionWithPadding(size_t, size_t, size_t, size_t, double padding_value = -9.e10);
     // average in section
-    float AverageInSection(size_t, size_t, size_t, size_t);
-    float AverageInSectionWithPadding(size_t, size_t, size_t, size_t);
+    double AverageInSection(size_t, size_t, size_t, size_t);
+    double AverageInSectionWithPadding(size_t, size_t, size_t, size_t);
     // average in section
-    float SumInSection(size_t, size_t, size_t, size_t);
-    float SumInSectionWithPadding(size_t, size_t, size_t, size_t);
+    double SumInSection(size_t, size_t, size_t, size_t);
+    double SumInSectionWithPadding(size_t, size_t, size_t, size_t);
     // padding matrix
-    Matrix Padding(size_t, size_t, bool pad_front=true, float padding_value=0); // padding matrix
+    Matrix Padding(size_t, size_t, bool pad_front=true, double padding_value=0); // padding matrix
     // correlation
-    Matrix Correlation(Matrix &, size_t stride=1, bool pad_front=false, float padding_value=0);
+    Matrix Correlation(Matrix &, size_t stride=1, bool pad_front=false, double padding_value=0);
     // convolution
-    Matrix Convolution(Matrix &, size_t stride=1, bool pad_front=false, float padding_value=0);
+    Matrix Convolution(Matrix &, size_t stride=1, bool pad_front=false, double padding_value=0);
 
     // fill matrix with random numbers
     void Random();
-    void Random(float min, float max);
-    void RandomGaus(float mu, float sigma);
+    void Random(double min, double max);
+    void RandomGaus(double mu, double sigma);
     std::pair<size_t, size_t> Dimension() const;
 
     void Clear();
     // fill element, row first
-    void FillElementByRow(size_t, float);
+    void FillElementByRow(size_t, double);
     // fill element, collum first
-    void FillElementByCollum(size_t, float);
+    void FillElementByCollum(size_t, double);
     // delete row
     void DeleteRow(size_t i);
     // delete collum
     void DeleteCollum(size_t j);
     // insert row
-    void InsertRow(size_t, std::vector<float>* ptr=nullptr);
+    void InsertRow(size_t, std::vector<double>* ptr=nullptr);
     // insert collum
-    void InsertCollum(size_t, std::vector<float>* ptr=nullptr);
+    void InsertCollum(size_t, std::vector<double>* ptr=nullptr);
 
     //static members
     // combine multiple matrix (same dimension) to one big matrix
@@ -151,17 +151,20 @@ public:
     // concatenate a vector of matrix in j direction / horizontally
     static Matrix ConcatenateMatrixByJ(std::vector<Matrix> &);
     // Get element (i, j) of the correlated matrix, A is input, B is kernel
-    static float GetCorrelationValue(Matrix &A, Matrix &B, size_t A_i, size_t A_j);
+    static double GetCorrelationValue(Matrix &A, Matrix &B, size_t A_i, size_t A_j);
     // Get element (i, j) of the convoluted matrix, A is input, B is kernel
-    static float GetConvolutionValue(Matrix &A, Matrix &B, size_t A_i, size_t A_j);
+    static double GetConvolutionValue(Matrix &A, Matrix &B, size_t A_i, size_t A_j);
+    // Batch normalization for a set of matrices (aka whitening for input data, weighted sum, etc)
+    static void BatchNormalization(std::vector<Matrix> &);
 
 private:
-    std::vector<std::vector<float>> __M;
+    std::vector<std::vector<double>> __M;
     static std::atomic<unsigned int> seed; // seed for random generator
 };
 
 std::ostream& operator<<(std::ostream& os, Matrix&);
-std::ostream& operator<<(std::ostream& os, std::vector<float>&);
+std::ostream& operator<<(std::ostream& os, std::vector<double>&);
+std::ostream& operator<<(std::ostream& os, std::vector<Matrix>&);
 bool operator==(std::pair<size_t, size_t> left, std::pair<size_t, size_t> right);
 bool operator!=(std::pair<size_t, size_t> left, std::pair<size_t, size_t> right);
 std::ostream& operator<<(std::ostream &os, const std::pair<size_t, size_t> &d);

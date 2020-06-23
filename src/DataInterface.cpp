@@ -259,14 +259,14 @@ void DataInterface::loadFile(const char* path, std::vector<Matrix> &contents)
 	    size_t ii = vec[i];
 	    size_t jj = vec[i+1];
 	    assert(ii<horizontal && jj < vertical);
-	    float val = vec[i+2];
+	    double val = vec[i+2];
 
 	    m[ii][jj] = val;
 	}
 
         Matrix _mm = m.Reshape(__dataDimensionFromParameter.first, __dataDimensionFromParameter.second);
-        Matrix mm = _mm.Normalization();
-	contents.push_back(mm);
+        //Matrix mm = _mm.Normalization();
+	contents.push_back(_mm);
     }
 
     // *** implement the image dimension

@@ -71,10 +71,10 @@ double Neuron::__softmax(Matrix &m_z)
     size_t i = __coord.i;
     assert(dim.first > i);
 
-    float sum = 0;
+    double sum = 0;
     for(size_t k = 0;k<dim.first;k++)
     {
-        sum += exp(m_z[k][0]);
+        sum += exp((double)m_z[k][0]);
     }
 
     return exp(m_z[i][0])/sum;
@@ -246,7 +246,6 @@ void Neuron::UpdateZFC(int sample_index)
     z_for_current_neuron = z_for_current_neuron + (*__b)[0][0];
 
     __z[sample_index] = z_for_current_neuron;
-
     //cout<<__func__<<" finished."<<endl;
 }
 
@@ -407,24 +406,30 @@ void Neuron::UpdateSigmaPrime(int sample_index)
     {
         // the \partial a over \partial z is the same for sigmoid and softmax
 	// one can easily prove it
-	sigma_prime = (1-a)*a;
+	double diff = 1. - a;
+	if( diff < 1e-10) diff = 0.; // to get rid of float number precision issues
+	sigma_prime = diff*a;
     }
     else if(__funcType == ActuationFuncType::Tanh) 
     {
-	sigma_prime = ( 2 / (exp(z) + exp(-z)) ) * ( 2 / (exp(z) + exp(-z)) );
+	sigma_prime = ( 2. / (exp(z) + exp(-z)) ) * ( 2. / (exp(z) + exp(-z)) );
     }
     else if(__funcType == ActuationFuncType::Relu) 
     {
-	if( z > 0) sigma_prime = 1;
+	if( z > 0) sigma_prime = 1.;
 	else sigma_prime = 0;
     }
     else
 	std::cout<<"Error: unsupported actuation function type in direvative."<<std::endl;
  
-    if(sigma_prime < 0)
+    if(sigma_prime < 0.)
     {
         std::cout<<"Error: Neuron::UpdateSigmaPrime: sigma_prime<0? something wrong."
 	         <<endl;
+	std::cout<<"    Actuation function type: "<<__funcType<<std::endl;
+	std::cout<<"    Z: "<<z<<std::endl;
+	std::cout<<"    a: "<<a<<std::endl;
+	std::cout<<"    sigma prime: "<<sigma_prime<<std::endl;
 	exit(0);
     }
 

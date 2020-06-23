@@ -20,6 +20,21 @@ std::ostream & operator<<(std::ostream &os, const LayerType &t)
     return os;
 }
 
+std::ostream & operator<<(std::ostream &os, const ActuationFuncType & t)
+{
+    if(t == ActuationFuncType::Sigmoid)
+        os<<"Sigmoid_Actuation_Func";
+    else if(t == ActuationFuncType::SoftMax)
+        os<<"Softmax_Actuation_Func";
+    else if(t == ActuationFuncType::Tanh)
+        os<<"Tanh_Actuation_Func";
+    else if(t == ActuationFuncType::Relu)
+        os<<"Relu_Actuation_Func";
+    else 
+        os<<"Undefined_Actuation_Func";
+    return os;
+}
+
 std::ostream & operator<<(std::ostream &os, const LayerDimension &dim)
 {
     if(dim == LayerDimension::_1D)
