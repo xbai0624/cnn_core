@@ -473,7 +473,7 @@ void Neuron::UpdateDeltaOutputLayer(int sample_index)
 	exit(0);
     }
     assert(__a.size() == __sigmaPrime.size()); // make sure all have been updated
-    auto labels = __layer->GetDataInterface()->GetCurrentBatchLabel();
+    auto & labels = __layer->GetDataInterface()->GetCurrentBatchLabel();
     assert(labels.size() == __a.size()); // make sure all samples have been processed
 
     //size_t batch_size = __a.size();
@@ -538,7 +538,7 @@ void Neuron::UpdateDeltaFC(int sample_index)
 
     Layer* __nextLayer = __layer->GetNextLayer();
 
-    auto __deltaNext = __nextLayer->GetImagesActiveDelta(); // no vectorization needed, b/c "fc->cnn" type connection is not used
+    auto & __deltaNext = __nextLayer->GetImagesActiveDelta(); // no vectorization needed, b/c "fc->cnn" type connection is not used
     //cout<<"delta images batch size: "<<__deltaNext.size()<<endl;
     Images image_delta_Next = __deltaNext[sample_index]; // get current sample delta
     std::vector<Matrix> &deltaNext = image_delta_Next.OutputImageFromKernel;

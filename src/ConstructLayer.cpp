@@ -1011,7 +1011,7 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
-		    auto a_vector = __neurons[k][i][j]->GetAVector();
+		    auto & a_vector = __neurons[k][i][j]->GetAVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
 			//cout<<a_vector.size()<<"......"<<l<<endl;
@@ -1051,7 +1051,7 @@ void ConstructLayer::UpdateImagesA(int sample_id)
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
-		    auto a_vector = __neurons[k][i][j]->GetAVector();
+		    auto & a_vector = __neurons[k][i][j]->GetAVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
 			//assert(a_vector.size() - 1 == l); // obsolete
@@ -1097,7 +1097,7 @@ void ConstructLayer::UpdateImagesSigmaPrime(int sample_id)
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
-		    auto s_vector = __neurons[k][i][j]->GetSigmaPrimeVector();
+		    auto & s_vector = __neurons[k][i][j]->GetSigmaPrimeVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {
 			SigP[i][j] = s_vector[sample_id];
@@ -1134,7 +1134,7 @@ void ConstructLayer::UpdateImagesSigmaPrime(int sample_id)
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
-		    auto s_vector = __neurons[k][i][j]->GetSigmaPrimeVector();
+		    auto & s_vector = __neurons[k][i][j]->GetSigmaPrimeVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    { 
 			SigP[i][j] = s_vector[sample_id];
@@ -1188,7 +1188,7 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
-		    auto z_vector = __neurons[k][i][j]->GetZVector();
+		    auto & z_vector = __neurons[k][i][j]->GetZVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
 			//assert(z_vector.size() - 1 == l); // obsolete
@@ -1226,7 +1226,7 @@ void ConstructLayer::UpdateImagesZ(int sample_id)
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
-		    auto z_vector = __neurons[k][i][j]->GetZVector();
+		    auto & z_vector = __neurons[k][i][j]->GetZVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
 			//assert(z_vector.size() - 1 == l); // obsolete
@@ -1290,7 +1290,7 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
-		    auto delta_vector = __neurons[k][i][j]->GetDeltaVector();
+		    auto & delta_vector = __neurons[k][i][j]->GetDeltaVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
 			//assert(delta_vector.size() - 1 == l); // obsolete
@@ -1329,7 +1329,7 @@ void ConstructLayer::UpdateImagesDelta(int sample_index)
 	    for(size_t i=0;i<__neuronDim.i;i++){
 		for(size_t j=0;j<__neuronDim.j;j++)
 		{
-		    auto delta_vector = __neurons[k][i][j]->GetDeltaVector();
+		    auto & delta_vector = __neurons[k][i][j]->GetDeltaVector();
 		    if(__neurons[k][i][j]->IsActive())
 		    {  // make sure no over extract
 			//assert(delta_vector.size() - 1 == l);
@@ -1680,7 +1680,7 @@ void ConstructLayer::TransferValueFromActiveToOriginal_WB()
 	{
 	    // for fc layer, nKernels = 1
 	    assert(nKernels == 1);
-	    auto filter_prev_layer = __prevLayer->GetActiveFlag();
+	    auto & filter_prev_layer = __prevLayer->GetActiveFlag();
 	    assert(filter_prev_layer.size() == 1);
 	    active_to_original_fc(__activeFlag[i], filter_prev_layer[0]);
 	}
@@ -1741,7 +1741,7 @@ void ConstructLayer::TransferValueFromOriginalToActive_WB()
 			(__prevLayer->GetType() == LayerType::fullyConnected ) // only fc layer no need for other type layers (output layer is labeled as 'fc'; input layer has no w&b matrix)
 		  )
 		{
-		    auto filter_prev = __prevLayer->GetActiveFlag();
+		    auto & filter_prev = __prevLayer->GetActiveFlag();
 		    assert(filter_prev.size() == 1);
 		    if(!filter_prev[0][j][0])
 			continue;
@@ -2017,7 +2017,7 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
     {
         // if previous layer is not an input/fullyConnected layer, then Vectorization operation is needed
 	//      this is for cnn->fc or pooling->fc
-        auto _tmp = __prevLayer->GetImagesFullA(); // 'a' images from previous layer
+        auto & _tmp = __prevLayer->GetImagesFullA(); // 'a' images from previous layer
 	for(auto &i: _tmp)
 	    a_images.push_back(i.Vectorization());
     }
@@ -2026,7 +2026,7 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsFC()
         // if previous layer is input/fc, no other operation is needed
 	a_images = __prevLayer->GetImagesFullA(); // 'a' images from previous layer
     }
-    auto d_images = this->GetImagesFullDelta(); // delta images from current layer
+    auto & d_images = this->GetImagesFullDelta(); // delta images from current layer
     // NOTE: 'a' and 'delta' include value correpsonds to disabled neurons
     //       it's just these values have been set to 0 when updating __imagesA, __imagesDelta
     //       see Functions UpdateImagesA() and UpdateImagesDelta()
@@ -2196,7 +2196,7 @@ void ConstructLayer::UpdateWeightsAndBiasFC()
 
     if(__prevLayer->GetType() == LayerType::input) // only fc layer need this, other layers won't affect
     {
-	auto prevLayerFilters = __prevLayer->GetActiveFlag();
+	auto & prevLayerFilters = __prevLayer->GetActiveFlag();
 	assert(prevLayerFilters.size() == 1);
 	assert(prevLayerFilters[0].Dimension().first == (size_t)__prevLayer->GetNumberOfNeurons());
 
@@ -2270,9 +2270,9 @@ void ConstructLayer::UpdateWeightsAndBiasGradientsCNN()
     //         !!! cnn->fc connection is allowed, however, 
     //         !!1 fc->cnn connection is not implemented for the moment
     //         !!! so no vectorization or tensorization is needed here
-    auto aVec = __prevLayer -> GetImagesFullA();
+    auto & aVec = __prevLayer -> GetImagesFullA();
     // get 'delta' matrix for current layer
-    auto deltaVec = this -> GetImagesFullDelta();
+    auto & deltaVec = this -> GetImagesFullDelta();
 
     // get kernel number
     size_t nKernel = __weightMatrixActive.size();

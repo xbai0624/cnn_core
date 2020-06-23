@@ -474,7 +474,7 @@ void UnitTest::TestCNN()
     {
 	// print a images
 	cout<<"XXXXXX::'A' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullA();
+	auto & images = l->GetImagesFullA();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -493,7 +493,7 @@ void UnitTest::TestCNN()
     {
 	// print a images
 	cout<<"XXXXXX::'Z' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullZ();
+	auto & images = l->GetImagesFullZ();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -563,7 +563,7 @@ void UnitTest::TestCNN()
     {
 	// print a images
 	cout<<"XXXXXX::'SigmaPrime' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullSigmaPrime();
+	auto & images = l->GetImagesFullSigmaPrime();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -583,7 +583,7 @@ void UnitTest::TestCNN()
     {
 	// print a images
 	cout<<"XXXXXX::'Delta' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullDelta();
+	auto & images = l->GetImagesFullDelta();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -729,7 +729,7 @@ void UnitTest::TestCNNToPooling()
     {
 	// print a images
 	cout<<"XXXXXX::'A' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullA();
+	auto & images = l->GetImagesFullA();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -748,7 +748,7 @@ void UnitTest::TestCNNToPooling()
     {
 	// print a images
 	cout<<"XXXXXX::'Z' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullZ();
+	auto & images = l->GetImagesFullZ();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -793,7 +793,7 @@ void UnitTest::TestCNNToPooling()
     {
 	// print a images
 	cout<<"XXXXXX::'Delta' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullDelta();
+	auto & images = l->GetImagesFullDelta();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -882,7 +882,7 @@ void UnitTest::TestCNNToCNN()
     {
 	// print a images
 	cout<<"XXXXXX::'A' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullA();
+	auto & images = l->GetImagesFullA();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -901,7 +901,7 @@ void UnitTest::TestCNNToCNN()
     {
 	// print a images
 	cout<<"XXXXXX::'Z' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullZ();
+	auto & images = l->GetImagesFullZ();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -965,7 +965,7 @@ void UnitTest::TestCNNToCNN()
     {
 	// print a images
 	cout<<"XXXXXX::'Delta' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullDelta();
+	auto & images = l->GetImagesFullDelta();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{
@@ -985,7 +985,7 @@ void UnitTest::TestCNNToCNN()
     {
 	// print a images
 	cout<<"XXXXXX::'SigmaPrime' images from layer: "<<l->GetID()<<endl;
-	auto images = l->GetImagesFullSigmaPrime();
+	auto & images = l->GetImagesFullSigmaPrime();
 	int sample_IIID = 0;
 	for(auto &i: images)
 	{

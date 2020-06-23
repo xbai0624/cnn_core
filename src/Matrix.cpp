@@ -115,7 +115,7 @@ Matrix::Matrix(std::vector<std::vector<double>> &vv)
 Matrix::~Matrix()
 {
     // place holder
-    __M.resize(0);
+    __M.clear();
 }
 
 Matrix Matrix::operator*(Matrix &B)
@@ -1327,6 +1327,7 @@ double Matrix::GetConvolutionValue(Matrix &A, Matrix &B, size_t i, size_t j)
     return res;
 }
 
+//#define PARALLEL_NORMALIZATION 8
 void Matrix::BatchNormalization(std::vector<Matrix> &vM)
 {
     // if only one matrix in vM, return. Otherwise the whitening procedure will set every element to 0.
@@ -1336,17 +1337,17 @@ void Matrix::BatchNormalization(std::vector<Matrix> &vM)
     double epsilon = 1e-8;
     double batchSize = static_cast<double>(vM.size());
 
-    auto get_mean_and_sigma = [&](size_t i, size_t j, double &mean, double &sigma)
+    auto get_mean_and_sigma = [&](std::vector<Matrix> &_vM, size_t i, size_t j, double &mean, double &sigma)
     {
         assert((int)i >= 0 && i < dim.first && (int)j >=0 && j < dim.second);
 
         mean = 0; sigma = 0;
-        for(auto &m: vM) {
+        for(auto &m: _vM) {
 	    mean += m[i][j];
 	}
 	mean /= batchSize;
 
-	for(auto &m: vM){
+	for(auto &m: _vM){
 	    sigma += (m[i][j] - mean) * (m[i][j] - mean);
 	}
 	sigma /= batchSize;
@@ -1356,15 +1357,23 @@ void Matrix::BatchNormalization(std::vector<Matrix> &vM)
     };
 
     // batch normalization
+#ifndef PARALLEL_NORMALIZATION
     for(size_t i=0;i<dim.first;i++){
 	for(size_t j=0;j<dim.second;j++)
 	{
 	    double mean = 0, sigma = 0;
-	    get_mean_and_sigma(i, j, mean, sigma);
+	    get_mean_and_sigma(vM, i, j, mean, sigma);
 	    for(auto &m: vM)
 		m[i][j] = (m[i][j] - mean)/sigma;
 	}
     }
+#else
+    //int nElements = dim.first * dim.second;
+    //int interval = nElements / PARALLEL_NORMALIZATION;
+    //size_t Range[PARALLEL_NORMALIZATION+1];
+
+    // to be implemented as needed in later, not much gain for now
+#endif
 }
 
 void Matrix::DeleteRow(size_t i)
