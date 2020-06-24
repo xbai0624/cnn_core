@@ -54,7 +54,12 @@ public:
     Matrix(size_t, size_t, double); // initialize all elements with a double 
     Matrix(std::pair<size_t, size_t>, double); // initialize all elements with a double
     Matrix(std::vector<std::vector<double>> &); // initialize matrix with a 2D vector
+
     Matrix(const Matrix &); // copy constructor
+    Matrix & operator=(const Matrix&) = default; // copy assignment
+    //Matrix(Matrix &&) = default; // move constructor
+    //Matrix& operator=(Matrix &&); // move assignment
+
     ~Matrix();
 
     // overload operator

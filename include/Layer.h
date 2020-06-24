@@ -451,6 +451,10 @@ class Layer
 {
 public:
     Layer();
+    Layer(const Layer &) = delete; // disable copy constructor
+    Layer& operator=(const Layer &) = delete; // disable copy assignment
+    Layer(Layer &&) = delete; // disable move constructor
+    Layer& operator=(Layer&&) = delete; // disable move assignment
     virtual ~Layer();
 
     // external interfaces
