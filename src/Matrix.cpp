@@ -112,6 +112,21 @@ Matrix::Matrix(std::vector<std::vector<double>> &vv)
         __M.push_back(vv[i]);
 }
 
+Matrix::Matrix(const Matrix &m)
+{
+    // copy constructor
+    auto dim = m.Dimension();
+    __M.resize(dim.first, std::vector<double>(dim.second, 0));
+    for(size_t i=0;i<dim.first;i++){
+        for(size_t j=0;j<dim.second;j++)
+	{
+	    __M[i][j] = m.GetElement(i, j);
+	}
+    }
+
+    assert(Dimension() == dim); // make sure copy is correct
+}
+
 Matrix::~Matrix()
 {
     // place holder
@@ -400,6 +415,12 @@ std::vector<double>& Matrix::operator[](size_t i)
 {
     // implement a 2d array like operation
     return __M[i];
+}
+
+double Matrix::GetElement(size_t i, size_t j) const
+{
+    // a helper, for copy constructor
+    return __M[i][j];
 }
 
 size_t Matrix::size() const 

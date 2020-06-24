@@ -54,6 +54,7 @@ public:
     Matrix(size_t, size_t, double); // initialize all elements with a double 
     Matrix(std::pair<size_t, size_t>, double); // initialize all elements with a double
     Matrix(std::vector<std::vector<double>> &); // initialize matrix with a 2D vector
+    Matrix(const Matrix &); // copy constructor
     ~Matrix();
 
     // overload operator
@@ -74,6 +75,7 @@ public:
     size_t size() const;
     void operator()(double(*funtor)(double)); // apply a functor to matrix element, matrix itself will be changed
     void operator()(double(*funtor)(double), size_t r1, size_t r2, size_t c1, size_t c2); // same as above, but only apply to a section of the matrix
+    double GetElement(size_t i, size_t j) const; // a helper for copy constructor
 
     // multiply
     void _mul_Multiply(Matrix &B, Matrix &C); // (*this) X B = C
